@@ -74,6 +74,12 @@ html,body{height:100%;background:var(--bg);color:var(--t);font-family:'Courier N
 .manualRow{padding:10px 11px;margin-bottom:6px}
 .noteBox{border:1px solid var(--b);border-radius:3px;padding:10px 11px;margin-bottom:8px;font-size:11px;line-height:1.6}
 textarea.ainput{resize:vertical;min-height:80px;font-family:inherit}
+.pulse{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px}
+.pulse-item{flex-shrink:0;border:1px solid var(--b);background:var(--panel);border-radius:4px;padding:7px 10px;min-width:84px}
+.pulse-lbl{font-size:8px;color:var(--d);letter-spacing:1px;margin-bottom:3px;white-space:nowrap}
+.pulse-val{font-size:11px;font-weight:700;color:var(--t);white-space:nowrap}
+.pulse-chg{font-size:9px;margin-top:1px}
+@media (min-width:900px){.pulse-item{min-width:110px;padding:9px 13px}.pulse-val{font-size:13px}}
 </style>
 </head>
 <body>
@@ -86,6 +92,7 @@ textarea.ainput{resize:vertical;min-height:80px;font-family:inherit}
     <div class="hdr-total" id="grandTotal">$—</div>
     <div class="hdr-sub" id="grandSub">hesaplanıyor…</div>
   </div>
+  <div id="marketPulse"></div>
   <div class="terms" id="termSwitcher"></div>
   <div class="tabs" id="tabs"></div>
   <div id="content"></div>
@@ -1062,8 +1069,63 @@ function renderContent(){
   }
   document.getElementById('content').innerHTML=html;
 }
+/* ═══════════ PİYASA NABZI — BTC, Altın, Gümüş, NASDAQ, S&P 500 ═══════════ */
+let pulseData={btc:null,btcChg:null,gold:null,goldChg:null,silver:null,silverChg:null,qqq:null,qqqChg:null,spy:null,spyChg:null};
+let pulseLoaded=false;
+function loadPulseCache(){
+  try{const c=JSON.parse(localStorage.getItem('pulse_cache')||'null');if(c)pulseData={...pulseData,...c};}catch{}
+}
+function savePulseCache(){localStorage.setItem('pulse_cache',JSON.stringify(pulseData));}
+async function fetchPulse(){
+  // BTC — CoinGecko, ücretsiz, anahtarsız
+  try{
+    const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
+    if(r.ok){const d=await r.json();pulseData.btc=d.bitcoin.usd;pulseData.btcChg=d.bitcoin.usd_24h_change;}
+  }catch(e){}
+  // Altın & Gümüş — gold-api.com, ücretsiz, anahtarsız
+  try{
+    const r=await fetch('https://api.gold-api.com/price/XAU');
+    if(r.ok){const d=await r.json();pulseData.gold=d.price;pulseData.goldChg=d.change_percent??null;}
+  }catch(e){}
+  try{
+    const r=await fetch('https://api.gold-api.com/price/XAG');
+    if(r.ok){const d=await r.json();pulseData.silver=d.price;pulseData.silverChg=d.change_percent??null;}
+  }catch(e){}
+  // NASDAQ (QQQ) & S&P 500 (SPY) — Finnhub, sende zaten var olan key ile
+  if(fhKey){
+    try{
+      const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=QQQ&token=${fhKey}`);
+      if(r.ok){const d=await r.json();if(d.c>0){pulseData.qqq=d.c;pulseData.qqqChg=d.dp;}}
+    }catch(e){}
+    try{
+      const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=SPY&token=${fhKey}`);
+      if(r.ok){const d=await r.json();if(d.c>0){pulseData.spy=d.c;pulseData.spyChg=d.dp;}}
+    }catch(e){}
+  }
+  pulseLoaded=true;savePulseCache();renderMarketPulse();
+}
+function renderMarketPulse(){
+  const el=document.getElementById('marketPulse');
+  if(!el)return;
+  const item=(lbl,val,chg,prefix='$')=>{
+    const hasChg=chg!=null&&!isNaN(chg);
+    const col=hasChg?(chg>=0?'var(--g)':'var(--r)'):'var(--d)';
+    const valTxt=val!=null?prefix+f(val,val<10?4:0):'—';
+    return`<div class="pulse-item"><div class="pulse-lbl">${lbl}</div><div class="pulse-val">${valTxt}</div>
+      <div class="pulse-chg" style="color:${col}">${hasChg?sg(chg)+f(Math.abs(chg),2)+'%':(pulseLoaded?'—':'…')}</div></div>`;
+  };
+  el.innerHTML=`<div class="pulse">
+    ${item('₿ BTC',pulseData.btc,pulseData.btcChg)}
+    ${item('◆ ALTIN (oz)',pulseData.gold,pulseData.goldChg)}
+    ${item('◇ GÜMÜŞ (oz)',pulseData.silver,pulseData.silverChg)}
+    ${item('NASDAQ (QQQ)',pulseData.qqq,pulseData.qqqChg)}
+    ${item('S&P 500 (SPY)',pulseData.spy,pulseData.spyChg)}
+  </div>`;
+}
+
 function renderAll(){
   renderHeader();
+  renderMarketPulse();
   renderTermSwitcher();
   renderTabs();
   renderContent();
@@ -1080,12 +1142,15 @@ function injectRefreshBtn(){
 }
 
 /* ═══════════ INIT ═══════════ */
+loadPulseCache();
 renderAll();
 doRefresh();
+fetchPulse();
 setInterval(()=>{
   const m=new Date().getUTCHours()*60+new Date().getUTCMinutes();
   if(term==='abd'&&m>=750&&m<1230)doRefresh();
 },60000);
+setInterval(fetchPulse,300000); // piyasa nabzı 5 dakikada bir güncellenir
 </script>
 </body>
 </html>
