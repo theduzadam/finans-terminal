@@ -13,6 +13,12 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--t);font-family:'Courier New',monospace;font-size:13px;-webkit-font-smoothing:antialiased}
 #app{max-width:680px;margin:0 auto;padding:14px 12px 70px}
+@media (min-width:900px){
+  #app{max-width:1400px;padding:24px 32px 80px}
+  .kgrid{grid-template-columns:repeat(6,1fr)}
+  .terms{flex-wrap:nowrap}
+  .term{min-width:140px}
+}
 .hdr{border-bottom:1px solid var(--b);padding-bottom:12px;margin-bottom:14px}
 .hdr-brand{font-size:9px;letter-spacing:4px;color:var(--d);margin-bottom:6px}
 .hdr-total{font-size:26px;font-weight:700;color:#fff;letter-spacing:-1px;line-height:1}
