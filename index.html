@@ -410,6 +410,11 @@ const NOTE_HINTS={
 function tabNote(tabName){
   const text=loadNote(term,tabName);
   const ts=noteTimestamp(term,tabName);
+  const isAutoNews=(term==='abd'&&tabName==='Haberler');
+  if(isAutoNews){
+    return`<div style="font-size:9px;color:var(--d);margin-bottom:10px">${ts?'son güncelleme: '+ts:''}</div>
+      <div style="font-size:11px;line-height:1.7">${text||'Henüz otomatik haber gelmedi.'}</div>`;
+  }
   const hint=NOTE_HINTS[tabName].replace('[terminal]',TERMINALS.find(t=>t.id===term)?.label||term);
   return`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">${hint}</div>
     <textarea class="ainput" id="noteArea_${term}_${tabName}" placeholder="Buraya Claude'un bulduğu özeti yapıştır…">${text}</textarea>
