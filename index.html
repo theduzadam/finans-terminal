@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Varlƒ±klarƒ±m">
+<meta name="apple-mobile-web-app-title" content="Varlıklarım">
 <meta name="theme-color" content="#070a0f">
-<title>‚óà Varlƒ±k Terminali</title>
+<title>◈ Varlık Terminali</title>
 <style>
 :root{--bg:#070a0f;--panel:#0c1018;--b:#1c2a3a;--g:#00e676;--r:#ff4444;--a:#ffb300;--bl:#00b0ff;--t:#b8c8d8;--d:#3d5570}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -86,11 +86,11 @@ textarea.ainput{resize:vertical;min-height:80px;font-family:inherit}
 <div id="app">
   <div class="hdr">
     <div class="hdr-brand" style="display:flex;justify-content:space-between;align-items:center">
-      <span>‚óà TOPLAM NET SERVET</span>
-      <button class="rfbtn" id="curToggle" onclick="toggleCurrency()" style="font-size:9px">$ / ‚Ç∫</button>
+      <span>◈ TOPLAM NET SERVET</span>
+      <button class="rfbtn" id="curToggle" onclick="toggleCurrency()" style="font-size:9px">$ / ₺</button>
     </div>
-    <div class="hdr-total" id="grandTotal">$‚Äî</div>
-    <div class="hdr-sub" id="grandSub">hesaplanƒ±yor‚Ä¶</div>
+    <div class="hdr-total" id="grandTotal">$—</div>
+    <div class="hdr-sub" id="grandSub">hesaplanıyor…</div>
   </div>
   <div id="marketPulse"></div>
   <div class="terms" id="termSwitcher"></div>
@@ -98,16 +98,16 @@ textarea.ainput{resize:vertical;min-height:80px;font-family:inherit}
   <div id="content"></div>
 </div>
 <script>
-/* 4 terminal: abd canlƒ±(Finnhub), bist101/temettu elle fiyat, fonlar basit liste.
-   6 sabit sekme: Portf√∂y/Takvim/Haberler/Sinyaller/Para Akƒ±≈üƒ±/Y√∂netim.
-   Takvim/Haberler/Sinyaller = not defteri (Claude'un bulduklarƒ±nƒ± buraya yapƒ±≈ütƒ±rƒ±rsƒ±n). */
+/* 4 terminal: abd canlı(Finnhub), bist101/temettu elle fiyat, fonlar basit liste.
+   6 sabit sekme: Portföy/Takvim/Haberler/Sinyaller/Para Akışı/Yönetim.
+   Takvim/Haberler/Sinyaller = not defteri (Claude'un bulduklarını buraya yapıştırırsın). */
 const TERMINALS=[
-  {id:'abd',label:'üá∫üá∏ ABD',unit:'USD'},
-  {id:'bist101',label:'üáπüá∑ BIST101',unit:'TRY'},
-  {id:'temettu',label:'üí∞ Temett√º',unit:'TRY'},
-  {id:'fonlar',label:'üìä Fonlar',unit:'TRY'},
+  {id:'abd',label:'🇺🇸 ABD',unit:'USD'},
+  {id:'bist101',label:'🇹🇷 BIST101',unit:'TRY'},
+  {id:'temettu',label:'💰 Temettü',unit:'TRY'},
+  {id:'fonlar',label:'📊 Fonlar',unit:'TRY'},
 ];
-const TABS=['Portf√∂y','Takvim','Haberler','Sinyaller','Para Akƒ±≈üƒ±','Y√∂netim'];
+const TABS=['Portföy','Takvim','Haberler','Sinyaller','Para Akışı','Yönetim'];
 let term=localStorage.getItem('activeTerm')||'abd';
 let tab=0;
 let usdtry=parseFloat(localStorage.getItem('usdtry')||'33.50');
@@ -120,18 +120,18 @@ function toggleCurrency(){
 function switchTerm(id){term=id;tab=0;expanded=null;sigExpanded=null;localStorage.setItem('activeTerm',id);renderAll();if(id==='bist101'||id==='temettu')doRefreshBIST();}
 function go(i){tab=i;renderTabs();renderContent();}
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê ORTAK YARDIMCI FONKSƒ∞YONLAR ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
-const f=(n,d=2)=>isNaN(n)||n==null?'‚Äî':n.toLocaleString('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
-const fv=n=>isNaN(n)||n==null?'‚Äî':'$'+f(n);
-const ftl=n=>isNaN(n)||n==null?'‚Äî':'‚Ç∫'+f(n);
+/* ═══════════ ORTAK YARDIMCI FONKSİYONLAR ═══════════ */
+const f=(n,d=2)=>isNaN(n)||n==null?'—':n.toLocaleString('tr-TR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fv=n=>isNaN(n)||n==null?'—':'$'+f(n);
+const ftl=n=>isNaN(n)||n==null?'—':'₺'+f(n);
 const sg=n=>n>=0?'+':'';
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê ABD TERMƒ∞NALƒ∞ ‚Äî Finnhub canlƒ± veri ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ ABD TERMİNALİ — Finnhub canlı veri ═══════════ */
 const DEFAULT_ABD=[
-  {t:"NVDA", n:11,    s:"Yarƒ± ƒ∞letken", c:"#00b0ff"},
+  {t:"NVDA", n:11,    s:"Yarı İletken", c:"#00b0ff"},
   {t:"MSFT", n:5,     s:"Cloud/AI",     c:"#ab47bc"},
-  {t:"AVGO", n:3,     s:"Yarƒ± ƒ∞letken", c:"#29b6f6"},
+  {t:"AVGO", n:3,     s:"Yarı İletken", c:"#29b6f6"},
   {t:"AMZN", n:8,     s:"Cloud",        c:"#7c4dff"},
   {t:"WDC",  n:2,     s:"Depolama",     c:"#ff7043"},
   {t:"FDVV", n:25,    s:"ETF",          c:"#90a4ae"},
@@ -139,7 +139,7 @@ const DEFAULT_ABD=[
   {t:"PANW", n:5,     s:"Siber",        c:"#e53935"},
   {t:"CRWD", n:2,     s:"Siber",        c:"#ef5350"},
   {t:"LLY",  n:1,     s:"Pharma/GLP-1", c:"#ec407a"},
-  {t:"AMSC", n:20,    s:"G√º√ß ≈ûebekesi", c:"#ffe082"},
+  {t:"AMSC", n:20,    s:"Güç Şebekesi", c:"#ffe082"},
   {t:"MGV",  n:6.341, s:"ETF",          c:"#78909c"},
   {t:"WMT",  n:7,     s:"Defansif",     c:"#42a5f5"},
   {t:"ORCL", n:5,     s:"Cloud",        c:"#5c6bc0"},
@@ -150,10 +150,10 @@ const DEFAULT_ABD=[
   {t:"TSLA", n:2,     s:"EV/AI",        c:"#66bb6a"},
   {t:"UMAC", n:30,    s:"Drone",        c:"#ff7043"},
   {t:"KTOS", n:11,    s:"Savunma",      c:"#8d6e63"},
-  {t:"GE",   n:2,     s:"Havacƒ±lƒ±k",    c:"#26a69a"},
+  {t:"GE",   n:2,     s:"Havacılık",    c:"#26a69a"},
   {t:"ONDS", n:50,    s:"Drone",        c:"#3949ab"},
   {t:"SOFI", n:25,    s:"Fintech",      c:"#29b6f6"},
-  {t:"SQQQ", n:27.5,  s:"Hedge (3x‚Üì)",  c:"#9e9e9e"},
+  {t:"SQQQ", n:27.5,  s:"Hedge (3x↓)",  c:"#9e9e9e"},
 ];
 const PALETTE=["#00b0ff","#7c4dff","#ab47bc","#26c6da","#ff7043","#66bb6a","#ffca28","#ef5350","#5c6bc0","#42a5f5","#ec407a","#26a69a","#ffe082","#8d6e63","#5e35b1","#90a4ae"];
 let ABD;
@@ -167,10 +167,10 @@ let L={},CH={},busy=false,lastUp=null,mkt='';
 let alarms=JSON.parse(localStorage.getItem('alarms')||'[]');
 let expanded=null;
 
-/* Yahoo Finance cache ‚Äî BIST/Temett√º canlƒ± fiyat + ge√ßmi≈ü veri */
+/* Yahoo Finance cache — BIST/Temettü canlı fiyat + geçmiş veri */
 let BIST_L={},BIST_CH={},YF_CAL={},SCORES={};
 let bistBusy=false,bistHistLoading=false,sigExpanded=null;
-const BIST_ATTEMPTED=new Set(); // YF'den denenmi≈ü semboller (ba≈üarƒ±sƒ±z da olsa)
+const BIST_ATTEMPTED=new Set(); // YF'den denenmiş semboller (başarısız da olsa)
 let econCal=null,econCalLoading=false;
 
 const gp=t=>L[t]?.price??null;
@@ -212,7 +212,7 @@ async function fetchChart(sym){
   }catch(e){}
   return null;
 }
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê YAHOO FINANCE ‚Äî BIST canlƒ± fiyat + ge√ßmi≈ü veri (√ºcretsiz, anahtarsƒ±z) ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ YAHOO FINANCE — BIST canlı fiyat + geçmiş veri (ücretsiz, anahtarsız) ═══════════ */
 const YF_CHART='https://query1.finance.yahoo.com/v8/finance/chart/';
 const YF_SUMM='https://query1.finance.yahoo.com/v10/finance/quoteSummary/';
 
@@ -316,28 +316,28 @@ async function doRefresh(){
     const results=await Promise.all(batch.map(s=>fetchOne(s)));
     results.forEach(ok=>{if(ok)okAny=true;});
     done+=batch.length;
-    if(b){b.textContent=`‚óè ${Math.min(done,syms.length)}/${syms.length}`;b.style.color='var(--bl)';b.style.borderColor='var(--bl)';}
+    if(b){b.textContent=`● ${Math.min(done,syms.length)}/${syms.length}`;b.style.color='var(--bl)';b.style.borderColor='var(--bl)';}
     renderHeader();
-    if(term==='abd'&&(tab===0||tab===4))renderContent(); // 0=Portf√∂y(+Hisseler/Alarmlar alt), 4=Para Akƒ±≈üƒ±
+    if(term==='abd'&&(tab===0||tab===4))renderContent(); // 0=Portföy(+Hisseler/Alarmlar alt), 4=Para Akışı
     await new Promise(r=>setTimeout(r,250));
   }
   if(okAny){lastUp=new Date();checkAlarms();recomputeAllScores();}
-  busy=false;if(b){b.textContent='‚ü≥ G√úNCELLE';b.style.color='';b.style.borderColor='';}
+  busy=false;if(b){b.textContent='⟳ GÜNCELLE';b.style.color='';b.style.borderColor='';}
   renderAll();
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê BIST101 TERMƒ∞NALƒ∞ ‚Äî Alfa/Beta/Katƒ±lƒ±m/Delta 4 alt-model ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
-// Ger√ßek Midas verisi, 22 Haz 2026. Aynƒ± hisse birden fazla modelde olabilir (√∂rn. ESCOM, KOTON, EBEBK).
-// Model bazlƒ±: maliyet/fiyat/aƒüƒ±rlƒ±k Midas ekranƒ±ndan; toplam hesabƒ±nda benzersiz hisse listesi kullanƒ±lƒ±r.
+/* ═══════════ BIST101 TERMİNALİ — Alfa/Beta/Katılım/Delta 4 alt-model ═══════════ */
+// Gerçek Midas verisi, 22 Haz 2026. Aynı hisse birden fazla modelde olabilir (örn. ESCOM, KOTON, EBEBK).
+// Model bazlı: maliyet/fiyat/ağırlık Midas ekranından; toplam hesabında benzersiz hisse listesi kullanılır.
 const BIST101_MODELS={
-  ALFA:    {risk:9, color:'#00e676', desc:'Yƒ±ldƒ±z Pazar + Ana Pazar, y√ºksek risk/potansiyel',
+  ALFA:    {risk:9, color:'#00e676', desc:'Yıldız Pazar + Ana Pazar, yüksek risk/potansiyel',
     holdings:[
       {t:"SANEL", cost:43.98, weight:32.95},
       {t:"ESCOM", cost:5.39,  weight:23.79},
       {t:"ISGSY", cost:109.00,weight:22.81},
       {t:"A1CAP", cost:10.04, weight:20.45},
     ]},
-  BETA:    {risk:8, color:'#00b0ff', desc:'Halka Arz Endeksi, b√ºy√ºme odaklƒ±',
+  BETA:    {risk:8, color:'#00b0ff', desc:'Halka Arz Endeksi, büyüme odaklı',
     holdings:[
       {t:"EFOR",  cost:11.67, weight:24.04},
       {t:"EUPWR", cost:72.50, weight:22.55},
@@ -345,7 +345,7 @@ const BIST101_MODELS={
       {t:"TRMET", cost:112.70,weight:17.32},
       {t:"BIMAS", cost:376.00,weight:16.96},
     ]},
-  KATILIM: {risk:4, color:'#ffca28', desc:'Faizsiz/Katƒ±lƒ±m Endeksi, dengeli',
+  KATILIM: {risk:4, color:'#ffca28', desc:'Faizsiz/Katılım Endeksi, dengeli',
     holdings:[
       {t:"ESCOM", cost:5.39,  weight:23.82},
       {t:"DGATE", cost:112.50,weight:20.06},
@@ -353,7 +353,7 @@ const BIST101_MODELS={
       {t:"EBEBK", cost:80.95, weight:18.72},
       {t:"ARASE", cost:123.50,weight:18.24},
     ]},
-  DELTA:   {risk:5, color:'#ab47bc', desc:'BIST100 k√∂kl√º ≈üirketler, d√º≈ü√ºk volatilite',
+  DELTA:   {risk:5, color:'#ab47bc', desc:'BIST100 köklü şirketler, düşük volatilite',
     holdings:[
       {t:"ORGE",  cost:102.10,weight:23.50},
       {t:"AGHOL", cost:33.84, weight:19.45},
@@ -362,7 +362,7 @@ const BIST101_MODELS={
       {t:"ATATP", cost:228.00,weight:18.66},
     ]},
 };
-// Benzersiz hisse listesi ‚Äî ger√ßek Midas portf√∂y√º (toplam hesabƒ± i√ßin), fiyatlar elle g√ºncellenir
+// Benzersiz hisse listesi — gerçek Midas portföyü (toplam hesabı için), fiyatlar elle güncellenir
 const DEFAULT_BIST101=[
   {t:"ATATP", n:100,  price:215.60, c:"#1e88e5"},
   {t:"ESCOM", n:4501, price:6.60,   c:"#7c4dff"},
@@ -388,18 +388,18 @@ catch{BIST101=JSON.parse(JSON.stringify(DEFAULT_BIST101));}
 function saveBIST101(){localStorage.setItem('bist101_portfolio',JSON.stringify(BIST101));}
 let BIST101_CASH=parseFloat(localStorage.getItem('bist101_cash')||'0');
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê TEMETT√ú TERMƒ∞NALƒ∞ ‚Äî baƒüƒ±msƒ±z, elle fiyat giri≈üi ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
-// {t, n, cost, price, s, c, divYield, divDate} ‚Äî ƒ∞≈ücep'ten 22 Haz 2026 itibarƒ±yla
+/* ═══════════ TEMETTÜ TERMİNALİ — bağımsız, elle fiyat girişi ═══════════ */
+// {t, n, cost, price, s, c, divYield, divDate} — İşcep'ten 22 Haz 2026 itibarıyla
 const DEFAULT_TEMETTU=[
-  {t:"KTLEV", n:1214,  cost:8.07,   price:183.60, s:"Holding/Kaldƒ±ra√ßlƒ±", c:"#00e676"},
+  {t:"KTLEV", n:1214,  cost:8.07,   price:183.60, s:"Holding/Kaldıraçlı", c:"#00e676"},
   {t:"BIMAS", n:266,   cost:307.33, price:379.00, s:"Perakende",          c:"#e53935"},
   {t:"TUPRS", n:350,   cost:181.38, price:220.70, s:"Enerji/Rafineri",    c:"#ff7043"},
-  {t:"NTGAZ", n:4000,  cost:12.41,  price:11.75,  s:"Doƒüalgaz",           c:"#26c6da"},
-  {t:"LOGO",  n:310,   cost:145.43, price:145.00, s:"Yazƒ±lƒ±m",            c:"#ef5350"},
+  {t:"NTGAZ", n:4000,  cost:12.41,  price:11.75,  s:"Doğalgaz",           c:"#26c6da"},
+  {t:"LOGO",  n:310,   cost:145.43, price:145.00, s:"Yazılım",            c:"#ef5350"},
   {t:"FROTO", n:500,   cost:90.00,  price:89.85,  s:"Otomotiv",           c:"#1e88e5"},
   {t:"MAVI",  n:1000,  cost:41.27,  price:41.10,  s:"Perakende/Tekstil",  c:"#3949ab"},
-  {t:"ISDMR", n:430,   cost:54.17,  price:63.25,  s:"Demir-√áelik",        c:"#8d6e63"},
-  {t:"ALTNY", n:0.999, cost:16.05,  price:15.90,  s:"Altƒ±n Fonu",         c:"#ffe082"},
+  {t:"ISDMR", n:430,   cost:54.17,  price:63.25,  s:"Demir-Çelik",        c:"#8d6e63"},
+  {t:"ALTNY", n:0.999, cost:16.05,  price:15.90,  s:"Altın Fonu",         c:"#ffe082"},
 ];
 let TEMETTU;
 try{const sv=JSON.parse(localStorage.getItem('temettu_portfolio'));TEMETTU=(sv&&sv.length)?sv:JSON.parse(JSON.stringify(DEFAULT_TEMETTU));}
@@ -407,22 +407,22 @@ catch{TEMETTU=JSON.parse(JSON.stringify(DEFAULT_TEMETTU));}
 function saveTEMETTU(){localStorage.setItem('temettu_portfolio',JSON.stringify(TEMETTU));}
 let TEMETTU_CASH=parseFloat(localStorage.getItem('temettu_cash')||'0');
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê FONLAR TERMƒ∞NALƒ∞ ‚Äî basit liste ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
-// {name, code, value, qty, cost, price, pnlPct} ‚Äî ƒ∞≈ücep'ten 22 Haz 2026, ortalama maliyetli
+/* ═══════════ FONLAR TERMİNALİ — basit liste ═══════════ */
+// {name, code, value, qty, cost, price, pnlPct} — İşcep'ten 22 Haz 2026, ortalama maliyetli
 const DEFAULT_FONLAR=[
-  {name:"Tera Portf√∂y Birinci Serbest Fon",          code:"TLY", value:477338.44, qty:73,     cost:3669.359413, price:6538.882712, pnlPct:78.2},
-  {name:"Atlas Portf√∂y Serbest Fon",                  code:"DFI", value:397987.07, qty:94616,  cost:2.393872,    price:4.206340,     pnlPct:75.71},
-  {name:"Pusula Portf√∂y Hisse Senedi Fonu",           code:"PHE", value:376134.22, qty:102348, cost:2.260278,    price:3.675052,     pnlPct:62.59},
-  {name:"Tera Portf√∂y Para Piyasasƒ± Fonu",            code:"TP2", value:314506.16, qty:156531, cost:1.961022,    price:2.009226,     pnlPct:2.46},
-  {name:"Pusula Portf√∂y Birinci Deƒüi≈üken Fon",        code:"PBR", value:152488.00, qty:30425,  cost:3.176441,    price:5.011931,     pnlPct:57.78},
-  {name:"ƒ∞≈ü Portf√∂y BIST Banka Endeksi Hisse Fonu",   code:"TAU", value:112161.95, qty:151492, cost:0.660097,    price:0.740382,     pnlPct:12.16},
+  {name:"Tera Portföy Birinci Serbest Fon",          code:"TLY", value:477338.44, qty:73,     cost:3669.359413, price:6538.882712, pnlPct:78.2},
+  {name:"Atlas Portföy Serbest Fon",                  code:"DFI", value:397987.07, qty:94616,  cost:2.393872,    price:4.206340,     pnlPct:75.71},
+  {name:"Pusula Portföy Hisse Senedi Fonu",           code:"PHE", value:376134.22, qty:102348, cost:2.260278,    price:3.675052,     pnlPct:62.59},
+  {name:"Tera Portföy Para Piyasası Fonu",            code:"TP2", value:314506.16, qty:156531, cost:1.961022,    price:2.009226,     pnlPct:2.46},
+  {name:"Pusula Portföy Birinci Değişken Fon",        code:"PBR", value:152488.00, qty:30425,  cost:3.176441,    price:5.011931,     pnlPct:57.78},
+  {name:"İş Portföy BIST Banka Endeksi Hisse Fonu",   code:"TAU", value:112161.95, qty:151492, cost:0.660097,    price:0.740382,     pnlPct:12.16},
 ];
 let FONLAR;
 try{const sv=JSON.parse(localStorage.getItem('fonlar_list'));FONLAR=(sv&&sv.length)?sv:JSON.parse(JSON.stringify(DEFAULT_FONLAR));}
 catch{FONLAR=JSON.parse(JSON.stringify(DEFAULT_FONLAR));}
 function saveFONLAR(){localStorage.setItem('fonlar_list',JSON.stringify(FONLAR));}
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê NOT DEFTERLERƒ∞ ‚Äî Takvim/Haberler/Sinyaller (her terminal i√ßin ayrƒ±) ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ NOT DEFTERLERİ — Takvim/Haberler/Sinyaller (her terminal için ayrı) ═══════════ */
 function loadNote(termId,tabName){
   return localStorage.getItem(`note_${termId}_${tabName}`)||'';
 }
@@ -434,7 +434,7 @@ function noteTimestamp(termId,tabName){
   return localStorage.getItem(`note_${termId}_${tabName}_ts`)||'';
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê HER TERMƒ∞NALƒ∞N USD/TRY DEƒûERƒ∞ ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ HER TERMİNALİN USD/TRY DEĞERİ ═══════════ */
 function calcBIST101(){
   let total=BIST101_CASH,day=0;
   const rows=BIST101.map(p=>{
@@ -481,35 +481,35 @@ function termTRYValue(id){
   return 0;
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê √úST BA≈ûLIK ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ ÜST BAŞLIK ═══════════ */
 function renderHeader(){
   let totalUSD=0;
   TERMINALS.forEach(t=>{totalUSD+=termUSDValue(t.id);});
   const totalTRY=totalUSD*usdtry;
   const main=displayCurrency==='USD'?totalUSD:totalTRY;
   const sub=displayCurrency==='USD'?totalTRY:totalUSD;
-  document.getElementById('grandTotal').textContent=(displayCurrency==='USD'?'$':'‚Ç∫')+f(main,displayCurrency==='USD'?2:0);
+  document.getElementById('grandTotal').textContent=(displayCurrency==='USD'?'$':'₺')+f(main,displayCurrency==='USD'?2:0);
   const subEl=document.getElementById('grandSub');
-  const altLabel=displayCurrency==='USD'?'‚Ç∫'+f(sub,0):'$'+f(sub,2);
-  subEl.innerHTML=`${altLabel} ¬∑ USD/TRY: <span onclick="editRate()" style="cursor:pointer;text-decoration:underline dotted;color:var(--a)">${f(usdtry,2)} ‚úé</span>`;
+  const altLabel=displayCurrency==='USD'?'₺'+f(sub,0):'$'+f(sub,2);
+  subEl.innerHTML=`${altLabel} · USD/TRY: <span onclick="editRate()" style="cursor:pointer;text-decoration:underline dotted;color:var(--a)">${f(usdtry,2)} ✎</span>`;
   const btn=document.getElementById('curToggle');
-  if(btn)btn.textContent=displayCurrency==='USD'?'‚Ç∫ olarak g√∂ster':'$ olarak g√∂ster';
+  if(btn)btn.textContent=displayCurrency==='USD'?'₺ olarak göster':'$ olarak göster';
 }
 function editRate(){
   const v=prompt('USD/TRY kurunu gir:',usdtry.toFixed(2));
   if(v!==null){const n=parseFloat(v.replace(',','.'));if(!isNaN(n)&&n>0){usdtry=n;localStorage.setItem('usdtry',n);renderAll();}}
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê TERMƒ∞NAL SE√áƒ∞Cƒ∞ (√ºst bar) ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ TERMİNAL SEÇİCİ (üst bar) ═══════════ */
 function renderTermSwitcher(){
   document.getElementById('termSwitcher').innerHTML=TERMINALS.map(t=>{
     const usd=termUSDValue(t.id),tryv=termTRYValue(t.id);
-    const disp=t.unit==='USD'?'$'+f(usd,0):'‚Ç∫'+f(tryv,0);
+    const disp=t.unit==='USD'?'$'+f(usd,0):'₺'+f(tryv,0);
     return`<div class="term ${term===t.id?'on':''}" onclick="switchTerm('${t.id}')"><div class="tn">${t.label}</div><div class="tv">${disp}</div></div>`;
   }).join('');
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê ALT SEKMELER ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ ALT SEKMELER ═══════════ */
 function renderTabs(){
   const trig=term==='abd'?alarms.filter(a=>a.triggered).length:0;
   document.getElementById('tabs').innerHTML=TABS.map((l,i)=>{
@@ -518,25 +518,25 @@ function renderTabs(){
   }).join('');
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê ORTAK NOT DEFTERƒ∞ SEKMESƒ∞ (Takvim/Haberler/Sinyaller) ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ ORTAK NOT DEFTERİ SEKMESİ (Takvim/Haberler/Sinyaller) ═══════════ */
 const NOTE_HINTS={
-  'Takvim':'Bug√ºn/bu hafta ekonomik takvim: Fed kararlarƒ±, enflasyon verisi, i≈üsizlik rakamlarƒ±. Claude\'a "[terminal] i√ßin takvim getir" diyerek bu sohbette ara≈ütƒ±rt, sonucu buraya yapƒ±≈ütƒ±r.',
-  'Haberler':'<b>üì∞ SABAH PORTF√ñY B√úLTENƒ∞ ‚Äî 24 Haziran 2026</b><br><br>üî¥ <b>NVDA</b> ‚Äî ABD Ticaret Bakanlƒ±ƒüƒ± ihracat lisansƒ± zorunluluƒüunu √áinli ≈üirketlerin yurt dƒ±≈üƒ± i≈ütirakleri i√ßin de kapsamƒ±na aldƒ±; Blackwell √ßip satƒ±≈ülarƒ±nda yeni kƒ±sƒ±tlama riski var.<br>üü¢ <b>CRWD</b> ‚Äî Rekor gelir (+%26 YoY, EPS +%51) ve 4-1 hisse b√∂l√ºnmesi 2 Temmuz\'da y√ºr√ºrl√ºƒüe giriyor.<br>üü¢ <b>ASTS</b> ‚Äî BlueBird 8-9-10 uydularƒ± ba≈üarƒ±yla fƒ±rlatƒ±ldƒ±; hisse 23 Haziran\'da %5,4 y√ºkseldi.<br>üü° <b>TSLA</b> ‚Äî Q2 teslimat raporu 2 Temmuz\'da; analistler 400K-420K ara√ß bekliyor.<br>‚ö° <b>MAKRO</b> ‚Äî Fed faizi %3,50-3,75\'te sabit (17-18 Haz); piyasalar 2026 sonu faiz artƒ±≈üƒ± fiyatlƒ±yor, yƒ±l sonu PCE tahmini %3,6.',
-  'Sinyaller':'Kurumsal raporlar, analist hedefleri, b√ºy√ºk oyuncu pozisyon deƒüi≈üiklikleri. Claude\'a "[terminal] i√ßin sinyaller getir" diyerek ara≈ütƒ±rt, sonucu buraya yapƒ±≈ütƒ±r.',
+  'Takvim':'Bugün/bu hafta ekonomik takvim: Fed kararları, enflasyon verisi, işsizlik rakamları. Claude\'a "[terminal] için takvim getir" diyerek bu sohbette araştırt, sonucu buraya yapıştır.',
+  'Haberler':'<b>📰 SABAH PORTFÖY BÜLTENİ — 24 Haziran 2026</b><br><br>🔴 <b>NVDA</b> — ABD Ticaret Bakanlığı ihracat lisansı zorunluluğunu Çinli şirketlerin yurt dışı iştirakleri için de kapsamına aldı; Blackwell çip satışlarında yeni kısıtlama riski var.<br>🟢 <b>CRWD</b> — Rekor gelir (+%26 YoY, EPS +%51) ve 4-1 hisse bölünmesi 2 Temmuz\'da yürürlüğe giriyor.<br>🟢 <b>ASTS</b> — BlueBird 8-9-10 uyduları başarıyla fırlatıldı; hisse 23 Haziran\'da %5,4 yükseldi.<br>🟡 <b>TSLA</b> — Q2 teslimat raporu 2 Temmuz\'da; analistler 400K-420K araç bekliyor.<br>⚡ <b>MAKRO</b> — Fed faizi %3,50-3,75\'te sabit (17-18 Haz); piyasalar 2026 sonu faiz artışı fiyatlıyor, yıl sonu PCE tahmini %3,6.',
+  'Sinyaller':'Kurumsal raporlar, analist hedefleri, büyük oyuncu pozisyon değişiklikleri. Claude\'a "[terminal] için sinyaller getir" diyerek araştırt, sonucu buraya yapıştır.',
 };
 function tabNote(tabName){
   const text=loadNote(term,tabName);
   const ts=noteTimestamp(term,tabName);
   const isAutoNews=(term==='abd'&&tabName==='Haberler');
   if(isAutoNews){
-    return`<div style="font-size:9px;color:var(--d);margin-bottom:10px">${ts?'son g√ºncelleme: '+ts:''}</div>
-      <div style="font-size:11px;line-height:1.7">${text||'Hen√ºz otomatik haber gelmedi.'}</div>`;
+    return`<div style="font-size:9px;color:var(--d);margin-bottom:10px">${ts?'son güncelleme: '+ts:''}</div>
+      <div style="font-size:11px;line-height:1.7">${text||'Henüz otomatik haber gelmedi.'}</div>`;
   }
   const hint=NOTE_HINTS[tabName].replace('[terminal]',TERMINALS.find(t=>t.id===term)?.label||term);
   return`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">${hint}</div>
-    <textarea class="ainput" id="noteArea_${term}_${tabName}" placeholder="Buraya Claude'un bulduƒüu √∂zeti yapƒ±≈ütƒ±r‚Ä¶">${text}</textarea>
+    <textarea class="ainput" id="noteArea_${term}_${tabName}" placeholder="Buraya Claude'un bulduğu özeti yapıştır…">${text}</textarea>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-      <span style="font-size:9px;color:var(--d)">${ts?'son g√ºncelleme: '+ts:'hen√ºz kaydedilmedi'}</span>
+      <span style="font-size:9px;color:var(--d)">${ts?'son güncelleme: '+ts:'henüz kaydedilmedi'}</span>
       <button class="abtn" onclick="saveNoteFromInput('${tabName}')">Kaydet</button>
     </div>`;
 }
@@ -546,7 +546,7 @@ function saveNoteFromInput(tabName){
   renderContent();
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê BAR CHART YARDIMCI ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ BAR CHART YARDIMCI ═══════════ */
 function bars(rows,gv,gc2,gl,gt){
   const mx=Math.max(...rows.map(r=>Math.abs(gv(r))),0.0001);
   return rows.map(r=>`<div class="brow"><div class="btick" style="color:${gc2(r)}">${gt(r)}</div>
@@ -554,7 +554,7 @@ function bars(rows,gv,gc2,gl,gt){
     <div class="blbl" style="color:${gc2(r)}">${gl(r)}</div></div>`).join('');
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê ABD: SPARKLINE + TEKNƒ∞K ANALƒ∞Z ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ ABD: SPARKLINE + TEKNİK ANALİZ ═══════════ */
 function sparkline(data,a,col){
   const W=560,H=120,pad=4;
   const slice=data.slice(-90);const cs=slice.map(x=>x.c);
@@ -600,27 +600,27 @@ function analyze(sym){
   const r=rsi(c);
   const resistance=Math.max(...h.slice(-60)),support=Math.min(...lo.slice(-60));
   const recentLow=Math.min(...lo.slice(-20));
-  let trend='N√ñTR',tcol='var(--a)';
+  let trend='NÖTR',tcol='var(--a)';
   if(ma50&&ma200){
-    if(price>ma50&&ma50>ma200){trend='Y√úKSELƒ∞≈û';tcol='var(--g)';}
-    else if(price<ma50&&ma50<ma200){trend='D√ú≈û√ú≈û';tcol='var(--r)';}
+    if(price>ma50&&ma50>ma200){trend='YÜKSELİŞ';tcol='var(--g)';}
+    else if(price<ma50&&ma50<ma200){trend='DÜŞÜŞ';tcol='var(--r)';}
   }
   const buyLow=ma50?Math.max(recentLow,ma50*0.97):recentLow;
   const buyHigh=ma50?ma50*1.03:price*0.98;
   const stop=support*0.985;
   let read='',rcol='var(--t)';
   const nearRes=price>=resistance*0.97,nearSup=price<=support*1.03;
-  if(r!=null&&r>72){read='A≈üƒ±rƒ± alƒ±m b√∂lgesi ‚Äî k√¢r alma/temkin';rcol='var(--a)';}
-  else if(r!=null&&r<32){read='A≈üƒ±rƒ± satƒ±m ‚Äî tepki alƒ±mƒ± gelebilir';rcol='var(--g)';}
-  else if(nearRes){read='Dirence yakƒ±n ‚Äî k√¢r-al / kƒ±rƒ±lƒ±m izle';rcol='var(--a)';}
-  else if(nearSup){read='Desteƒüe yakƒ±n ‚Äî alƒ±m b√∂lgesi olabilir';rcol='var(--g)';}
-  else if(trend==='Y√úKSELƒ∞≈û'){read='Trend yukarƒ± ‚Äî MA50 geri √ßekilmeleri fƒ±rsat';rcol='var(--g)';}
-  else if(trend==='D√ú≈û√ú≈û'){read='Trend a≈üaƒüƒ± ‚Äî dikkatli ol';rcol='var(--r)';}
-  else read='Yatay seyir ‚Äî net sinyal yok';
+  if(r!=null&&r>72){read='Aşırı alım bölgesi — kâr alma/temkin';rcol='var(--a)';}
+  else if(r!=null&&r<32){read='Aşırı satım — tepki alımı gelebilir';rcol='var(--g)';}
+  else if(nearRes){read='Dirence yakın — kâr-al / kırılım izle';rcol='var(--a)';}
+  else if(nearSup){read='Desteğe yakın — alım bölgesi olabilir';rcol='var(--g)';}
+  else if(trend==='YÜKSELİŞ'){read='Trend yukarı — MA50 geri çekilmeleri fırsat';rcol='var(--g)';}
+  else if(trend==='DÜŞÜŞ'){read='Trend aşağı — dikkatli ol';rcol='var(--r)';}
+  else read='Yatay seyir — net sinyal yok';
   return{price,ma50,ma200,rsi:r,resistance,support,buyLow,buyHigh,stop,trend,tcol,read,rcol,data};
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê Sƒ∞NYAL SKORU (0-100) ve TAM TEKNƒ∞K ANALƒ∞Z ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ SİNYAL SKORU (0-100) ve TAM TEKNİK ANALİZ ═══════════ */
 function maVal(c,p){return c.length>=p?avg(c.slice(-p)):null;}
 
 function computeScore(sym,data){
@@ -634,7 +634,7 @@ function computeScore(sym,data){
   if(m100)score+=price>m100?3:-3;
   if(m200)score+=price>m200?5:-5;
   if(m50&&m200)score+=m50>m200?10:-10;
-  /* Golden/Death Cross kontrol√º (son 30 g√ºn i√ßinde ger√ßekle≈üti mi?) */
+  /* Golden/Death Cross kontrolü (son 30 gün içinde gerçekleşti mi?) */
   if(c.length>=230){
     const prevS=maVal(c.slice(0,-30),50),prevL=maVal(c.slice(0,-30),200);
     if(prevS&&prevL&&m50&&m200){
@@ -656,8 +656,8 @@ function scoreBadge(score,small=false){
   if(score==null)return'';
   let col,label;
   if(score>=70){col='var(--g)';label='AL';}
-  else if(score>=55){col='#8bc34a';label='ƒ∞ZLE';}
-  else if(score>=45){col='var(--d)';label='N√ñTR';}
+  else if(score>=55){col='#8bc34a';label='İZLE';}
+  else if(score>=45){col='var(--d)';label='NÖTR';}
   else if(score>=30){col='var(--a)';label='ZAYIF';}
   else{col='var(--r)';label='SAT';}
   if(small)return`<span style="font-size:9px;font-weight:700;color:${col};padding:2px 5px;border:1px solid ${col}60;border-radius:3px">${score} ${label}</span>`;
@@ -668,7 +668,7 @@ function scoreBadge(score,small=false){
   </div>`;
 }
 
-/* Hem ABD hem BIST i√ßin √ßalƒ±≈üan tam teknik analiz (explicit data/price alƒ±r) */
+/* Hem ABD hem BIST için çalışan tam teknik analiz (explicit data/price alır) */
 function analyzeData(sym,price,data){
   if(!data||data.length<20)return null;
   const c=data.map(x=>x.c),h=data.map(x=>x.h),l=data.map(x=>x.l);
@@ -676,7 +676,7 @@ function analyzeData(sym,price,data){
   const m20=maVal(c,20),m50=maVal(c,50),m100=maVal(c,100),m200=maVal(c,200);
   const rsiVal=rsi(c);
   const resistance=Math.max(...h.slice(-60)),support=Math.min(...l.slice(-60));
-  /* Pivot noktalarƒ± (son kapanƒ±≈ü bazlƒ±) */
+  /* Pivot noktaları (son kapanış bazlı) */
   const lH=h[h.length-1],lL=l[l.length-1],lC=c[c.length-1];
   const pivP=(lH+lL+lC)/3;
   const pivR1=2*pivP-lL,pivR2=pivP+(lH-lL),pivR3=lH+2*(pivP-lL);
@@ -693,24 +693,24 @@ function analyzeData(sym,price,data){
   /* Trend */
   let trend='YATAY',tcol='var(--d)';
   if(m50&&m200){
-    if(cur>m50&&m50>m200){trend='Y√úKSELƒ∞≈û';tcol='var(--g)';}
-    else if(cur<m50&&m50<m200){trend='D√ú≈û√ú≈û';tcol='var(--r)';}
-    else if(m50>m200){trend='ZAYIF Y√úKSELƒ∞≈û';tcol='#8bc34a';}
-    else{trend='ZAYIF D√ú≈û√ú≈û';tcol='var(--a)';}
+    if(cur>m50&&m50>m200){trend='YÜKSELİŞ';tcol='var(--g)';}
+    else if(cur<m50&&m50<m200){trend='DÜŞÜŞ';tcol='var(--r)';}
+    else if(m50>m200){trend='ZAYIF YÜKSELİŞ';tcol='#8bc34a';}
+    else{trend='ZAYIF DÜŞÜŞ';tcol='var(--a)';}
   }
   const score=computeScore(sym,data);
   return{cur,m20,m50,m100,m200,rsiVal,resistance,support,
     pivP,pivR1,pivR2,pivR3,pivS1,pivS2,pivS3,crossType,trend,tcol,score};
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê YAKLA≈ûAN OLAYLAR BANNER ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ YAKLAŞAN OLAYLAR BANNER ═══════════ */
 function fmtEventDate(ts){
   if(!ts)return null;
   const d=new Date(ts*1000),now=new Date();
   const diff=Math.round((d-now)/(1000*60*60*24));
   if(diff<-1||diff>90)return null;
   const dateStr=d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short'});
-  const str=diff<0?'ge√ßti':diff===0?'bug√ºn':`${diff} g√ºn`;
+  const str=diff<0?'geçti':diff===0?'bugün':`${diff} gün`;
   return{dateStr,str,days:diff};
 }
 
@@ -721,14 +721,14 @@ function renderEventBanner(rows,calMap){
     const earn=fmtEventDate(cal.earningsDate);
     const div=fmtEventDate(cal.exDivDate);
     const col=r.c||'var(--bl)';
-    if(earn)events.push({sym:r.t,col,type:'üìä Bilan√ßo',...earn,extra:''});
-    if(div)events.push({sym:r.t,col,type:'üí∞ Ex-Tem.',...div,
-      extra:cal.divRate?` ¬∑ ${term==='abd'?'$':'‚Ç∫'}${f(cal.divRate,2)}`:''});
+    if(earn)events.push({sym:r.t,col,type:'📊 Bilanço',...earn,extra:''});
+    if(div)events.push({sym:r.t,col,type:'💰 Ex-Tem.',...div,
+      extra:cal.divRate?` · ${term==='abd'?'$':'₺'}${f(cal.divRate,2)}`:''});
   });
   if(!events.length)return'';
   events.sort((a,b)=>a.days-b.days);
   return`<div style="margin-bottom:12px">
-    <div class="sl" style="color:var(--a)">‚è∞ YAKLA≈ûAN OLAYLAR</div>
+    <div class="sl" style="color:var(--a)">⏰ YAKLAŞAN OLAYLAR</div>
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px">
       ${events.slice(0,10).map(e=>`
         <div style="flex-shrink:0;border:1px solid ${e.col}50;background:${e.col}12;border-radius:4px;padding:8px 11px;min-width:110px">
@@ -741,11 +741,11 @@ function renderEventBanner(rows,calMap){
   </div>`;
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê Sƒ∞NYALLER ‚Äî hisse kartƒ± ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ SİNYALLER — hisse kartı ═══════════ */
 function renderSignalCard(r,a,calObj){
   const score=a?.score??SCORES[r.t]??null;
   const open=sigExpanded===r.t;
-  const fmtV=v=>v==null?'‚Äî':(term==='abd'?fv(v):ftl(v));
+  const fmtV=v=>v==null?'—':(term==='abd'?fv(v):ftl(v));
   const maLine=(lbl,val,cur)=>val==null?'':`<div class="lvlrow">
     <span style="color:var(--d)">${lbl}</span>
     <span style="color:${cur>val?'var(--g)':'var(--r)'}">
@@ -756,25 +756,25 @@ function renderSignalCard(r,a,calObj){
   if(open){
     let techHtml='';
     if(!a){
-      techHtml=`<div style="color:var(--d);font-size:11px;padding:12px 0;text-align:center"><span class="spin">‚óà</span> teknik veri y√ºkleniyor‚Ä¶</div>`;
+      techHtml=`<div style="color:var(--d);font-size:11px;padding:12px 0;text-align:center"><span class="spin">◈</span> teknik veri yükleniyor…</div>`;
     }else{
       techHtml=`
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px">
           <span class="chip" style="background:${a.tcol}20;color:${a.tcol};border:1px solid ${a.tcol}50">${a.trend}</span>
           ${a.rsiVal!=null?`<span class="chip" style="background:var(--b);color:${a.rsiVal>70?'var(--r)':a.rsiVal<30?'var(--g)':'var(--t)'}">RSI ${f(a.rsiVal,0)}</span>`:''}
-          ${a.crossType==='golden'?`<span class="chip" style="background:rgba(255,179,0,.15);color:var(--a);border:1px solid rgba(255,179,0,.4)">‚ö° Golden Cross</span>`:''}
-          ${a.crossType==='death'?`<span class="chip" style="background:rgba(255,68,68,.15);color:var(--r);border:1px solid rgba(255,68,68,.4)">‚ò† Death Cross</span>`:''}
+          ${a.crossType==='golden'?`<span class="chip" style="background:rgba(255,179,0,.15);color:var(--a);border:1px solid rgba(255,179,0,.4)">⚡ Golden Cross</span>`:''}
+          ${a.crossType==='death'?`<span class="chip" style="background:rgba(255,68,68,.15);color:var(--r);border:1px solid rgba(255,68,68,.4)">☠ Death Cross</span>`:''}
         </div>
-        <div class="sl" style="margin-bottom:4px">HAREKETLƒ∞ ORTALAMALAR</div>
+        <div class="sl" style="margin-bottom:4px">HAREKETLİ ORTALAMALAR</div>
         <div style="border:1px solid var(--b);border-radius:3px;padding:4px 11px;margin-bottom:10px">
-          <div class="lvlrow"><span style="color:var(--r)">Diren√ß (60g)</span><span style="color:var(--r)">${fmtV(a.resistance)}</span></div>
+          <div class="lvlrow"><span style="color:var(--r)">Direnç (60g)</span><span style="color:var(--r)">${fmtV(a.resistance)}</span></div>
           ${maLine('MA20',a.m20,a.cur)}
           ${maLine('MA50',a.m50,a.cur)}
           ${maLine('MA100',a.m100,a.cur)}
           ${maLine('MA200',a.m200,a.cur)}
           <div class="lvlrow"><span style="color:var(--g)">Destek (60g)</span><span style="color:var(--g)">${fmtV(a.support)}</span></div>
         </div>
-        <div class="sl" style="margin-bottom:4px">Pƒ∞VOT SEVƒ∞YELERƒ∞ (g√ºnl√ºk)</div>
+        <div class="sl" style="margin-bottom:4px">PİVOT SEVİYELERİ (günlük)</div>
         <div style="border:1px solid var(--b);border-radius:3px;padding:4px 11px;margin-bottom:10px">
           <div class="lvlrow"><span style="color:var(--r)">R3</span><span style="color:var(--r)">${fmtV(a.pivR3)}</span></div>
           <div class="lvlrow"><span style="color:var(--r)">R2</span><span style="color:var(--r)">${fmtV(a.pivR2)}</span></div>
@@ -790,12 +790,12 @@ function renderSignalCard(r,a,calObj){
     if(calObj){
       const earn=fmtEventDate(calObj.earningsDate),div=fmtEventDate(calObj.exDivDate);
       if(earn||div||calObj.divRate){
-        calHtml=`<div class="sl" style="margin-bottom:4px">TEMEL TAKVƒ∞M</div>
+        calHtml=`<div class="sl" style="margin-bottom:4px">TEMEL TAKVİM</div>
           <div style="border:1px solid var(--b);border-radius:3px;padding:4px 11px;margin-bottom:10px">
-            ${earn?`<div class="lvlrow"><span>üìä Bilan√ßo</span><span style="color:var(--a)">${earn.dateStr} ¬∑ ${earn.str} sonra</span></div>`:''}
-            ${div?`<div class="lvlrow"><span>üí∞ Ex-Temett√º</span><span style="color:var(--a)">${div.dateStr} ¬∑ ${div.str} sonra</span></div>`:''}
-            ${calObj.divRate!=null?`<div class="lvlrow"><span style="color:var(--d)">Temett√º/hisse</span><span>${term==='abd'?'$':'‚Ç∫'}${f(calObj.divRate,2)}</span></div>`:''}
-            ${calObj.divYield!=null?`<div class="lvlrow"><span style="color:var(--d)">Temett√º verimi</span><span>${f(calObj.divYield*100,2)}%</span></div>`:''}
+            ${earn?`<div class="lvlrow"><span>📊 Bilanço</span><span style="color:var(--a)">${earn.dateStr} · ${earn.str} sonra</span></div>`:''}
+            ${div?`<div class="lvlrow"><span>💰 Ex-Temettü</span><span style="color:var(--a)">${div.dateStr} · ${div.str} sonra</span></div>`:''}
+            ${calObj.divRate!=null?`<div class="lvlrow"><span style="color:var(--d)">Temettü/hisse</span><span>${term==='abd'?'$':'₺'}${f(calObj.divRate,2)}</span></div>`:''}
+            ${calObj.divYield!=null?`<div class="lvlrow"><span style="color:var(--d)">Temettü verimi</span><span>${f(calObj.divYield*100,2)}%</span></div>`:''}
           </div>`;
       }
     }
@@ -809,12 +809,12 @@ function renderSignalCard(r,a,calObj){
       <div class="sdot" style="background:${r.c||'var(--bl)'}"></div>
       <div>
         <div style="font-weight:700;color:${r.c||'var(--bl)'}">${r.t}</div>
-        <div style="font-size:9px;color:var(--d)">${r.s||''} ¬∑ ${fmtV(r.price)}</div>
+        <div style="font-size:9px;color:var(--d)">${r.s||''} · ${fmtV(r.price)}</div>
       </div>
       ${scoreBadge(score)}
       <div style="text-align:right;min-width:54px">
-        <div style="color:${dcCol};font-size:11px">${dc!=null?sg(dc)+f(Math.abs(dc),2)+'%':'‚Äî'}</div>
-        <div style="font-size:9px;color:var(--d)">${open?'‚ñ≤ kapat':'‚ñº detay'}</div>
+        <div style="color:${dcCol};font-size:11px">${dc!=null?sg(dc)+f(Math.abs(dc),2)+'%':'—'}</div>
+        <div style="font-size:9px;color:var(--d)">${open?'▲ kapat':'▼ detay'}</div>
       </div>
     </div>${body}
   </div>`;
@@ -822,10 +822,10 @@ function renderSignalCard(r,a,calObj){
 
 function sigToggle(sym){
   sigExpanded=sigExpanded===sym?null:sym;
-  /* Gerekirse ge√ßmi≈ü veri y√ºkle */
+  /* Gerekirse geçmiş veri yükle */
   if(sigExpanded){
     if((term==='bist101'||term==='temettu')&&!BIST_CH[sym]){
-      BIST_ATTEMPTED.delete(sym); // Elle tƒ±klanƒ±nca tekrar dene
+      BIST_ATTEMPTED.delete(sym); // Elle tıklanınca tekrar dene
       fetchYFHistory(sym).then(()=>{fetchYFCal(sym);recomputeAllScores();renderContent();});
     }
     if(term==='abd'&&!CH[sym]){
@@ -836,10 +836,10 @@ function sigToggle(sym){
   renderContent();
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê Sƒ∞NYALLER SEKME ANA FONKSƒ∞YONU ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ SİNYALLER SEKME ANA FONKSİYONU ═══════════ */
 function tabSignals(){
   if(term==='fonlar'){
-    return`<div class="empty">Fonlar i√ßin teknik sinyal mevcut deƒüil.<br>Fon performansƒ±nƒ± Portf√∂y sekmesinden takip edebilirsin.</div>`;
+    return`<div class="empty">Fonlar için teknik sinyal mevcut değil.<br>Fon performansını Portföy sekmesinden takip edebilirsin.</div>`;
   }
   let rows,getHist,isBist=false;
   if(term==='abd'){
@@ -866,22 +866,22 @@ function tabSignals(){
   const anyLoading=isBist&&sorted.some(r=>!BIST_CH[r.t]&&!BIST_ATTEMPTED.has(r.t));
   const yfFailed=isBist&&allAttempted&&sorted.every(r=>!BIST_CH[r.t]);
   const hint=anyLoading||bistHistLoading
-    ?`<div style="font-size:9px;color:var(--d);padding:8px 0"><span class="spin">‚óà</span> Ge√ßmi≈ü fiyat verisi y√ºkleniyor (Yahoo Finance)‚Ä¶</div>`
+    ?`<div style="font-size:9px;color:var(--d);padding:8px 0"><span class="spin">◈</span> Geçmiş fiyat verisi yükleniyor (Yahoo Finance)…</div>`
     :yfFailed
-    ?`<div style="font-size:9px;color:var(--a);padding:8px 0;border:1px solid rgba(255,179,0,.2);border-radius:3px;padding:8px 11px;margin-bottom:8px">‚ö† Yahoo Finance baƒülanamadƒ± ‚Äî teknik skor hesaplanamadƒ±. Hisse detayƒ±na tƒ±klayƒ±nca tekrar denenir.</div>`
+    ?`<div style="font-size:9px;color:var(--a);padding:8px 0;border:1px solid rgba(255,179,0,.2);border-radius:3px;padding:8px 11px;margin-bottom:8px">⚠ Yahoo Finance bağlanamadı — teknik skor hesaplanamadı. Hisse detayına tıklayınca tekrar denenir.</div>`
     :'';
   return`<div style="font-size:9px;color:var(--d);margin-bottom:10px;line-height:1.6">
-    Skor 0-100: <span style="color:var(--g)">70+ AL</span> ¬∑ <span style="color:#8bc34a">55-70 ƒ∞ZLE</span> ¬∑ <span style="color:var(--d)">45-55 N√ñTR</span> ¬∑ <span style="color:var(--a)">30-45 ZAYIF</span> ¬∑ <span style="color:var(--r)">0-30 SAT</span> ¬∑ Yatƒ±rƒ±m tavsiyesi deƒüildir.</div>
+    Skor 0-100: <span style="color:var(--g)">70+ AL</span> · <span style="color:#8bc34a">55-70 İZLE</span> · <span style="color:var(--d)">45-55 NÖTR</span> · <span style="color:var(--a)">30-45 ZAYIF</span> · <span style="color:var(--r)">0-30 SAT</span> · Yatırım tavsiyesi değildir.</div>
     ${hint}${banner}${cards}`;
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê ABD ‚Äî SEKME 0: PORTF√ñY ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ ABD — SEKME 0: PORTFÖY ═══════════ */
 function keyBanner(){
-  if(fhKey)return`<div style="font-size:9px;color:var(--g);margin-bottom:10px">‚úì Finnhub baƒülƒ± ¬∑ <span onclick="setKey()" style="color:var(--bl);cursor:pointer;text-decoration:underline">key deƒüi≈ütir</span></div>`;
+  if(fhKey)return`<div style="font-size:9px;color:var(--g);margin-bottom:10px">✓ Finnhub bağlı · <span onclick="setKey()" style="color:var(--bl);cursor:pointer;text-decoration:underline">key değiştir</span></div>`;
   return`<div style="border:1px solid var(--a);background:rgba(255,179,0,.07);border-radius:4px;padding:12px;margin-bottom:14px">
-    <div style="font-size:11px;color:var(--a);font-weight:700;letter-spacing:1px;margin-bottom:6px">‚ö† CANLI VERƒ∞ ƒ∞√áƒ∞N FINNHUB KEY GEREKLƒ∞</div>
-    <div style="font-size:10px;color:var(--d);line-height:1.6;margin-bottom:9px">finnhub.io/register ‚Üí √ºcretsiz kayƒ±t ‚Üí API key'i kopyala ‚Üí a≈üaƒüƒ±ya yapƒ±≈ütƒ±r.</div>
-    <div style="display:flex;gap:6px"><input class="ainput" id="keyInput" type="text" placeholder="API key'i buraya yapƒ±≈ütƒ±r" style="flex:1"><button class="abtn" onclick="saveKeyFromInput()">Kaydet</button></div></div>`;
+    <div style="font-size:11px;color:var(--a);font-weight:700;letter-spacing:1px;margin-bottom:6px">⚠ CANLI VERİ İÇİN FINNHUB KEY GEREKLİ</div>
+    <div style="font-size:10px;color:var(--d);line-height:1.6;margin-bottom:9px">finnhub.io/register → ücretsiz kayıt → API key'i kopyala → aşağıya yapıştır.</div>
+    <div style="display:flex;gap:6px"><input class="ainput" id="keyInput" type="text" placeholder="API key'i buraya yapıştır" style="flex:1"><button class="abtn" onclick="saveKeyFromInput()">Kaydet</button></div></div>`;
 }
 function saveKeyFromInput(){const v=document.getElementById('keyInput').value.trim();if(v){fhKey=v;localStorage.setItem('fhkey',v);renderAll();doRefresh();}}
 function setKey(){const v=prompt('Finnhub API key:',fhKey);if(v!==null){fhKey=v.trim();localStorage.setItem('fhkey',fhKey);renderAll();doRefresh();}}
@@ -889,24 +889,24 @@ function setKey(){const v=prompt('Finnhub API key:',fhKey);if(v!==null){fhKey=v.
 function tabABD_Portfolio(){
   const{rows,total,eq}=calcABD();
   const known=rows.filter(r=>r.val!=null).sort((a,b)=>b.val-a.val);
-  if(!known.length)return keyBanner()+`<div class="empty"><div style="font-size:26px;opacity:.3;margin-bottom:10px">‚óà</div>
-    ${fhKey?'Canlƒ± fiyat bekleniyor‚Ä¶<br><span style="color:var(--t)">‚ü≥ G√úNCELLE</span> butonuna basƒ±n':'Yukarƒ±ya Finnhub key girince<br>canlƒ± veriler y√ºklenecek'}</div>`;
+  if(!known.length)return keyBanner()+`<div class="empty"><div style="font-size:26px;opacity:.3;margin-bottom:10px">◈</div>
+    ${fhKey?'Canlı fiyat bekleniyor…<br><span style="color:var(--t)">⟳ GÜNCELLE</span> butonuna basın':'Yukarıya Finnhub key girince<br>canlı veriler yüklenecek'}</div>`;
   const kpis=`${keyBanner()}<div class="kgrid">
     <div class="kpi"><div class="klbl">TOPLAM</div><div class="kval" style="color:#fff">${fv(total)}</div></div>
-    <div class="kpi"><div class="klbl">Hƒ∞SSE</div><div class="kval" style="color:var(--bl)">${f(eq/total*100,1)}%</div></div>
-    <div class="kpi"><div class="klbl">NAKƒ∞T</div><div class="kval" style="color:var(--a)">${f(ABD_CASH/total*100,1)}%</div></div></div>`;
+    <div class="kpi"><div class="klbl">HİSSE</div><div class="kval" style="color:var(--bl)">${f(eq/total*100,1)}%</div></div>
+    <div class="kpi"><div class="klbl">NAKİT</div><div class="kval" style="color:var(--a)">${f(ABD_CASH/total*100,1)}%</div></div></div>`;
   const eqPct=eq/total*100,cashPct=ABD_CASH/total*100;
-  const split=`<div class="sl">NAKƒ∞T / Hƒ∞SSE DAƒûILIMI</div>
+  const split=`<div class="sl">NAKİT / HİSSE DAĞILIMI</div>
   <div class="panel" style="margin-bottom:14px">
     <div style="display:flex;height:26px;border-radius:3px;overflow:hidden;margin-bottom:10px">
       <div style="width:${eqPct}%;background:var(--bl);display:flex;align-items:center;justify-content:center;font-size:10px;color:#000;font-weight:700">${eqPct>12?f(eqPct,0)+'%':''}</div>
       <div style="width:${cashPct}%;background:var(--a);display:flex;align-items:center;justify-content:center;font-size:10px;color:#000;font-weight:700">${cashPct>10?f(cashPct,0)+'%':''}</div>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:11px">
-      <span><span style="color:var(--bl)">‚óè</span> Hisse: <b>${fv(eq)}</b></span>
-      <span><span style="color:var(--a)">‚óè</span> Nakit: <b>${fv(ABD_CASH)}</b></span>
+      <span><span style="color:var(--bl)">●</span> Hisse: <b>${fv(eq)}</b></span>
+      <span><span style="color:var(--a)">●</span> Nakit: <b>${fv(ABD_CASH)}</b></span>
     </div></div>`;
-  const chart=`<div class="sl">DAƒûILIM (% PORTF√ñY)</div>
+  const chart=`<div class="sl">DAĞILIM (% PORTFÖY)</div>
   <div class="panel" style="padding:12px 8px;margin-bottom:14px;max-height:300px;overflow-y:auto">${bars(known,r=>r.val/total*100,r=>r.c,r=>f(r.val/total*100,1)+'%',r=>r.t)}</div>`;
   const sm={};rows.forEach(r=>{if(r.val!=null)sm[r.s]=(sm[r.s]||0)+r.val;});
   const sec=Object.entries(sm).sort((a,b)=>b[1]-a[1]).map(([s,v])=>{
@@ -914,7 +914,7 @@ function tabABD_Portfolio(){
     return`<div class="spill" style="border:1px solid ${col}35;background:${col}10"><span style="color:${col}">${s}</span><span style="color:var(--d);margin-left:6px">${f(v/total*100,1)}%</span></div>`;
   }).join('');
 
-  // Alt b√∂l√ºm ge√ßi≈üi: Pozisyonlar / Alarmlar
+  // Alt bölüm geçişi: Pozisyonlar / Alarmlar
   const trig=alarms.filter(a=>a.triggered).length;
   const subTabs=`<div style="display:flex;gap:6px;margin:16px 0 10px">
     <button class="miniBtn ${abdSub===0?'':''}" onclick="setAbdSub(0)" style="border-color:${abdSub===0?'var(--bl)':'var(--b)'};color:${abdSub===0?'var(--bl)':'var(--t)'}">Pozisyonlar (grafik/teknik)</button>
@@ -928,18 +928,18 @@ function tabABD_Portfolio(){
 let abdSub=0;
 function setAbdSub(i){abdSub=i;renderContent();}
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê ABD ‚Äî SEKME √∂zel: Hƒ∞SSELER (grafik/teknik/alarm) ‚Äî "Para Akƒ±≈üƒ±" yerinde deƒüil, Portf√∂y altƒ±nda eri≈üilir ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ ABD — SEKME özel: HİSSELER (grafik/teknik/alarm) — "Para Akışı" yerinde değil, Portföy altında erişilir ═══════════ */
 function tabABD_Stocks(){
   const{rows}=calcABD();
   const sorted=[...rows].sort((a,b)=>(b.val||0)-(a.val||0));
-  const intro=`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">Hisseye dokun ‚Üí grafik, teknik seviyeler, alarm kurma a√ßƒ±lƒ±r. Yatƒ±rƒ±m tavsiyesi deƒüildir.</div>`;
+  const intro=`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">Hisseye dokun → grafik, teknik seviyeler, alarm kurma açılır. Yatırım tavsiyesi değildir.</div>`;
   return intro+sorted.map(r=>{
     const dcp=r.dcp,dc=dcp==null?'var(--d)':dcp>=0?'var(--g)':'var(--r)';
     const open=expanded===r.t;
     let body='';
     if(open){
       const a=CH[r.t]?analyze(r.t):null;
-      if(!a){body=`<div class="scard-body"><div style="padding:18px 0;text-align:center;color:var(--d);font-size:11px"><span class="spin">‚óà</span> grafik y√ºkleniyor‚Ä¶</div></div>`;}
+      if(!a){body=`<div class="scard-body"><div style="padding:18px 0;text-align:center;color:var(--d);font-size:11px"><span class="spin">◈</span> grafik yükleniyor…</div></div>`;}
       else{
         const has=alarms.filter(x=>x.sym===r.t);
         body=`<div class="scard-body">
@@ -949,19 +949,19 @@ function tabABD_Stocks(){
             ${a.rsi!=null?`<span class="chip" style="background:var(--b);color:var(--t)">RSI ${f(a.rsi,0)}</span>`:''}
             <span class="chip" style="background:${a.rcol}15;color:${a.rcol}">${a.read}</span></div>
           <div style="border:1px solid var(--b);border-radius:3px;padding:4px 11px;margin-bottom:10px">
-            <div class="lvlrow"><span style="color:var(--r)">Diren√ß (60g zirve)</span><span style="color:var(--r)">${fv(a.resistance)}</span></div>
+            <div class="lvlrow"><span style="color:var(--r)">Direnç (60g zirve)</span><span style="color:var(--r)">${fv(a.resistance)}</span></div>
             <div class="lvlrow"><span style="color:var(--a)">MA50</span><span>${fv(a.ma50)}</span></div>
             <div class="lvlrow"><span style="color:var(--d)">MA200</span><span>${fv(a.ma200)}</span></div>
             <div class="lvlrow"><span style="color:var(--g)">Destek (60g dip)</span><span style="color:var(--g)">${fv(a.support)}</span></div>
-            <div class="lvlrow"><span style="color:var(--bl)">Alƒ±m b√∂lgesi</span><span style="color:var(--bl)">${fv(a.buyLow)} ‚Äì ${fv(a.buyHigh)}</span></div>
+            <div class="lvlrow"><span style="color:var(--bl)">Alım bölgesi</span><span style="color:var(--bl)">${fv(a.buyLow)} – ${fv(a.buyHigh)}</span></div>
             <div class="lvlrow"><span style="color:var(--r)">Stop / risk</span><span style="color:var(--r)">${fv(a.stop)}</span></div></div>
           <div class="sl" style="margin-bottom:6px">ALARM KUR</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
-            <button class="miniBtn" onclick="quickAlarm('${r.t}','above',${a.resistance.toFixed(2)})" style="border-color:var(--r);color:var(--r)">‚Üë Diren√ß ${f(a.resistance,0)}</button>
-            <button class="miniBtn" onclick="quickAlarm('${r.t}','below',${a.support.toFixed(2)})" style="border-color:var(--g);color:var(--g)">‚Üì Destek ${f(a.support,0)}</button>
-            <button class="miniBtn" onclick="quickAlarm('${r.t}','above',${a.buyHigh.toFixed(2)})" style="border-color:var(--bl);color:var(--bl)">‚Üë MA50 ${f(a.buyHigh,0)}</button></div>
+            <button class="miniBtn" onclick="quickAlarm('${r.t}','above',${a.resistance.toFixed(2)})" style="border-color:var(--r);color:var(--r)">↑ Direnç ${f(a.resistance,0)}</button>
+            <button class="miniBtn" onclick="quickAlarm('${r.t}','below',${a.support.toFixed(2)})" style="border-color:var(--g);color:var(--g)">↓ Destek ${f(a.support,0)}</button>
+            <button class="miniBtn" onclick="quickAlarm('${r.t}','above',${a.buyHigh.toFixed(2)})" style="border-color:var(--bl);color:var(--bl)">↑ MA50 ${f(a.buyHigh,0)}</button></div>
           <div style="display:flex;gap:6px;margin-bottom:6px">
-            <input class="ainput" id="ap_${r.t}" type="number" step="0.01" placeholder="√∂zel fiyat ($)" style="flex:1">
+            <input class="ainput" id="ap_${r.t}" type="number" step="0.01" placeholder="özel fiyat ($)" style="flex:1">
             <button class="miniBtn" onclick="customAlarm('${r.t}')" style="border-color:var(--bl);color:var(--bl)">+ Ekle</button></div>
           ${has.length?`<div style="font-size:9px;color:var(--d);margin-top:6px">Bu hissede ${has.length} alarm kurulu</div>`:''}
         </div>`;
@@ -970,9 +970,9 @@ function tabABD_Stocks(){
     const sc=CH[r.t]?computeScore(r.t,CH[r.t]):SCORES[r.t]??null;
     return`<div class="scard"><div class="scard-head" onclick="toggle('${r.t}')">
         <div class="sdot" style="background:${r.c}"></div>
-        <div><div style="font-weight:700;color:${r.c}">${r.t}</div><div style="font-size:9px;color:var(--d)">${r.s} ¬∑ ${r.n} adet</div></div>
-        <div style="text-align:right"><div style="font-weight:600">${r.val!=null?fv(r.val):'‚Äî'}</div><div style="font-size:10px;color:var(--d)">${r.price!=null?fv(r.price):''}</div></div>
-        <div style="text-align:right;min-width:60px"><div style="color:${dc};font-size:12px">${dcp==null?'‚Äî':sg(dcp)+f(Math.abs(dcp),2)+'%'}</div><div style="font-size:9px;color:var(--d)">${open?'‚ñ≤ kapat':'‚ñº detay'}</div></div>
+        <div><div style="font-weight:700;color:${r.c}">${r.t}</div><div style="font-size:9px;color:var(--d)">${r.s} · ${r.n} adet</div></div>
+        <div style="text-align:right"><div style="font-weight:600">${r.val!=null?fv(r.val):'—'}</div><div style="font-size:10px;color:var(--d)">${r.price!=null?fv(r.price):''}</div></div>
+        <div style="text-align:right;min-width:60px"><div style="color:${dc};font-size:12px">${dcp==null?'—':sg(dcp)+f(Math.abs(dcp),2)+'%'}</div><div style="font-size:9px;color:var(--d)">${open?'▲ kapat':'▼ detay'}</div></div>
         ${scoreBadge(sc)}
       </div>${body}</div>`;
   }).join('');
@@ -1003,40 +1003,40 @@ function checkAlarms(){
   });
   if(fired.length){
     saveAlarms();
-    if('Notification'in window&&Notification.permission==='granted')fired.forEach(a=>new Notification(`üîî ${a.sym} alarmƒ±`,{body:`${a.sym} ${a.type==='above'?'‚â•':'‚â§'} $${f(a.price)} ‚Äî ≈üu an $${f(gp(a.sym))}`}));
+    if('Notification'in window&&Notification.permission==='granted')fired.forEach(a=>new Notification(`🔔 ${a.sym} alarmı`,{body:`${a.sym} ${a.type==='above'?'≥':'≤'} $${f(a.price)} — şu an $${f(gp(a.sym))}`}));
   }
 }
 function tabABD_Alarms(){
-  const intro=`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">Alarmlar sayfa a√ßƒ±k ve veri √ßekerken kontrol edilir. 7/24 telefon bildirimi i√ßin Midas'ƒ±n kendi üîî alarmƒ±nƒ± da kullan.</div>`;
-  if(!alarms.length)return intro+`<div class="empty">Hen√ºz alarm yok.<br>Hisseler listesinde bir hisseye dokunup<br>alarm kurabilirsin.</div>`;
+  const intro=`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">Alarmlar sayfa açık ve veri çekerken kontrol edilir. 7/24 telefon bildirimi için Midas'ın kendi 🔔 alarmını da kullan.</div>`;
+  if(!alarms.length)return intro+`<div class="empty">Henüz alarm yok.<br>Hisseler listesinde bir hisseye dokunup<br>alarm kurabilirsin.</div>`;
   const trig=alarms.filter(a=>a.triggered),act=alarms.filter(a=>!a.triggered);
   const card=a=>{
     const pr=gp(a.sym),st=ABD.find(p=>p.t===a.sym),col=st?.c||'#78909c';
-    const dir=a.type==='above'?'‚Üë √ºst√ºne':'‚Üì altƒ±na',dirc=a.type==='above'?'var(--g)':'var(--r)';
+    const dir=a.type==='above'?'↑ üstüne':'↓ altına',dirc=a.type==='above'?'var(--g)':'var(--r)';
     return`<div class="alarmItem"><div style="display:flex;align-items:center;gap:9px">
         <div class="sdot" style="background:${col}"></div>
         <div><span style="font-weight:700;color:${col}">${a.sym}</span><span style="color:${dirc};margin-left:6px">${dir} $${f(a.price)}</span>
-          ${a.triggered?`<span class="tag" style="background:var(--r)18;color:var(--r);margin-left:6px">‚óè TETƒ∞KLENDƒ∞ ${a.triggeredAt||''}</span>`:`<span style="font-size:9px;color:var(--d);margin-left:6px">≈üu an $${pr!=null?f(pr):'‚Äî'}</span>`}</div></div>
+          ${a.triggered?`<span class="tag" style="background:var(--r)18;color:var(--r);margin-left:6px">● TETİKLENDİ ${a.triggeredAt||''}</span>`:`<span style="font-size:9px;color:var(--d);margin-left:6px">şu an $${pr!=null?f(pr):'—'}</span>`}</div></div>
       <div style="display:flex;gap:5px">
-        <button class="miniBtn" onclick="toggleAlarm(${a.id})">${a.active?(a.triggered?'sƒ±fƒ±rla':'durdur'):'a√ß'}</button>
+        <button class="miniBtn" onclick="toggleAlarm(${a.id})">${a.active?(a.triggered?'sıfırla':'durdur'):'aç'}</button>
         <button class="miniBtn" onclick="delAlarm(${a.id})" style="border-color:var(--r);color:var(--r)">sil</button></div></div>`;
   };
   let html=intro;
-  if(trig.length)html+=`<div class="sl" style="color:var(--r)">‚óè TETƒ∞KLENEN (${trig.length})</div>`+trig.map(card).join('')+'<div style="height:14px"></div>';
-  html+=`<div class="sl">AKTƒ∞F ALARMLAR (${act.length})</div>`+(act.length?act.map(card).join(''):'<div style="font-size:11px;color:var(--d)">aktif alarm yok</div>');
+  if(trig.length)html+=`<div class="sl" style="color:var(--r)">● TETİKLENEN (${trig.length})</div>`+trig.map(card).join('')+'<div style="height:14px"></div>';
+  html+=`<div class="sl">AKTİF ALARMLAR (${act.length})</div>`+(act.length?act.map(card).join(''):'<div style="font-size:11px;color:var(--d)">aktif alarm yok</div>');
   return html;
 }
 function tabABD_Flow(){
   const{rows}=calcABD();
   const v=[...rows].filter(r=>r.dcp!=null).sort((a,b)=>b.dcp-a.dcp);
-  if(!v.length)return`<div class="empty">Canlƒ± fiyat bekleniyor‚Ä¶<br><span style="color:var(--t)">‚ü≥ G√úNCELLE</span></div>`;
+  if(!v.length)return`<div class="empty">Canlı fiyat bekleniyor…<br><span style="color:var(--t)">⟳ GÜNCELLE</span></div>`;
   const wins=v.filter(r=>r.dc>0),loss=v.filter(r=>r.dc<0);
   const gn=wins.reduce((s,r)=>s+r.dc,0),ls=loss.reduce((s,r)=>s+r.dc,0),net=gn+ls;
   const sum=`<div class="kgrid">
-    <div class="kpi" style="border-color:${net>=0?'rgba(0,230,118,.3)':'rgba(255,68,68,.3)'}"><div class="klbl">NET G√úNL√úK</div><div class="kval ${net>=0?'pos':'neg'}">${sg(net)}${fv(Math.abs(net))}</div></div>
-    <div class="kpi" style="border-color:rgba(0,230,118,.25);background:rgba(0,230,118,.04)"><div class="klbl">YE≈ûƒ∞L ¬∑ ${wins.length}</div><div class="kval pos">+${fv(gn)}</div></div>
-    <div class="kpi" style="border-color:rgba(255,68,68,.25);background:rgba(255,68,68,.04)"><div class="klbl">KIRMIZI ¬∑ ${loss.length}</div><div class="kval neg">-${fv(Math.abs(ls))}</div></div></div>`;
-  const chart=`<div class="sl">G√úNL√úK % DEƒûƒ∞≈ûƒ∞M</div>
+    <div class="kpi" style="border-color:${net>=0?'rgba(0,230,118,.3)':'rgba(255,68,68,.3)'}"><div class="klbl">NET GÜNLÜK</div><div class="kval ${net>=0?'pos':'neg'}">${sg(net)}${fv(Math.abs(net))}</div></div>
+    <div class="kpi" style="border-color:rgba(0,230,118,.25);background:rgba(0,230,118,.04)"><div class="klbl">YEŞİL · ${wins.length}</div><div class="kval pos">+${fv(gn)}</div></div>
+    <div class="kpi" style="border-color:rgba(255,68,68,.25);background:rgba(255,68,68,.04)"><div class="klbl">KIRMIZI · ${loss.length}</div><div class="kval neg">-${fv(Math.abs(ls))}</div></div></div>`;
+  const chart=`<div class="sl">GÜNLÜK % DEĞİŞİM</div>
   <div class="panel" style="padding:12px 8px;margin-bottom:14px;max-height:430px;overflow-y:auto">
     ${bars(v,r=>Math.abs(r.dcp),r=>r.dcp>=0?'var(--g)':'var(--r)',r=>`<span style="color:${r.dcp>=0?'var(--g)':'var(--r)'}">${sg(r.dcp)}${f(Math.abs(r.dcp),2)}%</span>`,r=>`<span style="color:${r.dcp>=0?'var(--g)':'var(--r)'}">${r.t}</span>`)}
   </div>`;
@@ -1044,43 +1044,43 @@ function tabABD_Flow(){
 }
 function tabABD_Manage(){
   const{rows}=calcABD();
-  const intro=`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">Hisse ekle, sil, adet deƒüi≈ütir veya sat. Sattƒ±ƒüƒ±nda tutar otomatik nakite eklenir. Alttaki "Hisseler" listesinde grafik/teknik analiz/alarm bulunur.</div>`;
-  const cashBox=`<div class="panel" style="margin-bottom:12px"><div class="sl">NAKƒ∞T (USD)</div>
+  const intro=`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">Hisse ekle, sil, adet değiştir veya sat. Sattığında tutar otomatik nakite eklenir. Alttaki "Hisseler" listesinde grafik/teknik analiz/alarm bulunur.</div>`;
+  const cashBox=`<div class="panel" style="margin-bottom:12px"><div class="sl">NAKİT (USD)</div>
     <div style="display:flex;gap:6px;align-items:center"><input class="ainput" id="mCash" type="number" step="0.01" value="${ABD_CASH.toFixed(2)}" style="flex:1">
     <button class="miniBtn" onclick="setCashFromInput()" style="border-color:var(--a);color:var(--a)">Kaydet</button></div></div>`;
-  const addBox=`<div class="panel" style="margin-bottom:14px"><div class="sl">+ YENƒ∞ Hƒ∞SSE EKLE</div>
+  const addBox=`<div class="panel" style="margin-bottom:14px"><div class="sl">+ YENİ HİSSE EKLE</div>
     <div style="display:flex;gap:6px;margin-bottom:6px">
-      <input class="ainput" id="addSym" type="text" placeholder="Sembol (√∂rn. AAPL)" style="flex:1.2;text-transform:uppercase">
+      <input class="ainput" id="addSym" type="text" placeholder="Sembol (örn. AAPL)" style="flex:1.2;text-transform:uppercase">
       <input class="ainput" id="addQty" type="number" step="0.001" placeholder="Adet" style="flex:1"></div>
     <div style="display:flex;gap:6px">
-      <input class="ainput" id="addSec" type="text" placeholder="Sekt√∂r (opsiyonel)" style="flex:1.2">
+      <input class="ainput" id="addSec" type="text" placeholder="Sektör (opsiyonel)" style="flex:1.2">
       <button class="abtn" onclick="addStock()" style="flex:1">Ekle & Al</button></div>
-    <div style="font-size:9px;color:var(--d);margin-top:6px">Canlƒ± fiyat √ßekilir; alƒ±≈ü tutarƒ± nakitten d√º≈ü√ºl√ºr.</div></div>`;
+    <div style="font-size:9px;color:var(--d);margin-top:6px">Canlı fiyat çekilir; alış tutarı nakitten düşülür.</div></div>`;
   const sorted=[...rows].sort((a,b)=>(b.val||0)-(a.val||0));
-  const list=`<div class="sl">MEVCUT POZƒ∞SYONLAR (${ABD.length})</div>`+sorted.map(r=>{
-    const priceTxt=r.price!=null?fv(r.price):'‚Äî';
+  const list=`<div class="sl">MEVCUT POZİSYONLAR (${ABD.length})</div>`+sorted.map(r=>{
+    const priceTxt=r.price!=null?fv(r.price):'—';
     return`<div class="panel" style="margin-bottom:6px;padding:10px 11px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
         <div style="display:flex;align-items:center;gap:8px"><div class="sdot" style="background:${r.c}"></div>
           <span style="font-weight:700;color:${r.c}">${r.t}</span><span style="font-size:9px;color:var(--d)">${r.s}</span></div>
-        <span style="font-size:11px">${r.val!=null?fv(r.val):'‚Äî'} <span style="color:var(--d);font-size:9px">@ ${priceTxt}</span></span></div>
+        <span style="font-size:11px">${r.val!=null?fv(r.val):'—'} <span style="color:var(--d);font-size:9px">@ ${priceTxt}</span></span></div>
       <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
         <span style="font-size:9px;color:var(--d)">Adet:</span>
         <input class="ainput" id="q_${r.t}" type="number" step="0.001" value="${r.n}" style="width:78px;padding:5px 7px;font-size:11px">
-        <button class="miniBtn" onclick="updateQty('${r.t}')" style="border-color:var(--bl);color:var(--bl)">G√ºncelle</button>
+        <button class="miniBtn" onclick="updateQty('${r.t}')" style="border-color:var(--bl);color:var(--bl)">Güncelle</button>
         <button class="miniBtn" onclick="sellPrompt('${r.t}')" style="border-color:var(--g);color:var(--g)">Sat</button>
         <button class="miniBtn" onclick="delStock('${r.t}')" style="border-color:var(--r);color:var(--r)">Sil</button></div></div>`;
   }).join('');
-  const reset=`<div style="margin-top:16px;text-align:center"><button class="miniBtn" onclick="resetABD()" style="border-color:var(--r);color:var(--r);font-size:9px">‚ü≤ Portf√∂y√º sƒ±fƒ±rla</button></div>`;
+  const reset=`<div style="margin-top:16px;text-align:center"><button class="miniBtn" onclick="resetABD()" style="border-color:var(--r);color:var(--r);font-size:9px">⟲ Portföyü sıfırla</button></div>`;
   return intro+cashBox+addBox+list+reset;
 }
 function setCashFromInput(){const v=parseFloat(document.getElementById('mCash').value);if(!isNaN(v)&&v>=0){ABD_CASH=v;localStorage.setItem('abd_cash',v);renderAll();}}
 async function addStock(){
   const sym=document.getElementById('addSym').value.trim().toUpperCase();
   const qty=parseFloat(document.getElementById('addQty').value);
-  const sec=document.getElementById('addSec').value.trim()||'Diƒüer';
+  const sec=document.getElementById('addSec').value.trim()||'Diğer';
   if(!sym||!qty||qty<=0){alert('Sembol ve adet gerekli');return;}
-  if(ABD.find(p=>p.t===sym)){alert(sym+' zaten portf√∂yde. Adet g√ºncellemeyi kullan.');return;}
+  if(ABD.find(p=>p.t===sym)){alert(sym+' zaten portföyde. Adet güncellemeyi kullan.');return;}
   const col=PALETTE[ABD.length%PALETTE.length];
   ABD.push({t:sym,n:qty,s:sec,c:col});saveABD();
   await fetchOne(sym);
@@ -1090,49 +1090,49 @@ async function addStock(){
 }
 function updateQty(sym){
   const v=parseFloat(document.getElementById('q_'+sym).value);
-  if(isNaN(v)||v<0){alert('Ge√ßersiz adet');return;}
+  if(isNaN(v)||v<0){alert('Geçersiz adet');return;}
   if(v===0){delStock(sym);return;}
   const p=ABD.find(x=>x.t===sym);if(p){p.n=v;saveABD();renderAll();}
 }
 function sellPrompt(sym){
   const p=ABD.find(x=>x.t===sym);if(!p)return;
   const pr=gp(sym);
-  const v=prompt(`${sym} ‚Äî ka√ß adet satƒ±yorsun? (elindeki: ${p.n})${pr?'\\nG√ºncel fiyat: $'+f(pr):''}`,'');
+  const v=prompt(`${sym} — kaç adet satıyorsun? (elindeki: ${p.n})${pr?'\\nGüncel fiyat: $'+f(pr):''}`,'');
   if(v===null)return;
   const q=parseFloat(v);
-  if(isNaN(q)||q<=0||q>p.n){alert('Ge√ßersiz adet');return;}
+  if(isNaN(q)||q<=0||q>p.n){alert('Geçersiz adet');return;}
   if(pr){ABD_CASH+=pr*q;localStorage.setItem('abd_cash',ABD_CASH);}
   p.n=+(p.n-q).toFixed(4);
   if(p.n<=0.0001)ABD=ABD.filter(x=>x.t!==sym);
   saveABD();renderAll();
-  if(pr)setTimeout(()=>alert(`${q} adet ${sym} satƒ±ldƒ± ‚Üí +${fv(pr*q)} nakite eklendi`),50);
+  if(pr)setTimeout(()=>alert(`${q} adet ${sym} satıldı → +${fv(pr*q)} nakite eklendi`),50);
 }
 function delStock(sym){
-  if(!confirm(sym+' portf√∂yden silinsin mi? (nakit etkilenmez)'))return;
+  if(!confirm(sym+' portföyden silinsin mi? (nakit etkilenmez)'))return;
   ABD=ABD.filter(x=>x.t!==sym);saveABD();if(expanded===sym)expanded=null;renderAll();
 }
 function resetABD(){
-  if(!confirm('T√ºm deƒüi≈üiklikler silinip varsayƒ±lan portf√∂ye d√∂n√ºlecek. Emin misin?'))return;
+  if(!confirm('Tüm değişiklikler silinip varsayılan portföye dönülecek. Emin misin?'))return;
   ABD=JSON.parse(JSON.stringify(DEFAULT_ABD));saveABD();renderAll();doRefresh();
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê
-   BIST101 / TEMETT√ú ‚Äî Ortak yapƒ± (elle fiyat giri≈üi, manuel g√ºncelleme)
-   Her ikisi de aynƒ± ≈üablonu kullanƒ±r, farklƒ± veri+localStorage key'leri
-‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════════════════════════════════════════════════════════════════
+   BIST101 / TEMETTÜ — Ortak yapı (elle fiyat girişi, manuel güncelleme)
+   Her ikisi de aynı şablonu kullanır, farklı veri+localStorage key'leri
+═══════════════════════════════════════════════════════════════════════ */
 function genericManualPortfolio(arr,cash,calcFn,colorSeedOffset){
   const{rows,total}=calcFn();
   const known=rows.filter(r=>r.price!=null&&r.price>0);
-  if(!known.length&&!arr.length)return null; // bo≈ü ‚Äî √ßaƒüƒ±ran taraf empty g√∂sterir
+  if(!known.length&&!arr.length)return null; // boş — çağıran taraf empty gösterir
   const sorted=[...rows].sort((a,b)=>(b.val||0)-(a.val||0));
   const eq=total-cash;
   const kpis=`<div class="kgrid">
     <div class="kpi"><div class="klbl">TOPLAM</div><div class="kval" style="color:#fff">${ftl(total)}</div></div>
-    <div class="kpi"><div class="klbl">Hƒ∞SSE</div><div class="kval" style="color:var(--bl)">${total>0?f(eq/total*100,1):'0'}%</div></div>
-    <div class="kpi"><div class="klbl">NAKƒ∞T</div><div class="kval" style="color:var(--a)">${ftl(cash)}</div></div></div>`;
-  const chart=sorted.length?`<div class="sl">DAƒûILIM</div>
+    <div class="kpi"><div class="klbl">HİSSE</div><div class="kval" style="color:var(--bl)">${total>0?f(eq/total*100,1):'0'}%</div></div>
+    <div class="kpi"><div class="klbl">NAKİT</div><div class="kval" style="color:var(--a)">${ftl(cash)}</div></div></div>`;
+  const chart=sorted.length?`<div class="sl">DAĞILIM</div>
   <div class="panel" style="padding:12px 8px;margin-bottom:14px;max-height:300px;overflow-y:auto">
-    ${bars(sorted,r=>total>0?(r.val||0)/total*100:0,r=>r.c,r=>total>0?f((r.val||0)/total*100,1)+'%':'‚Äî',r=>r.t)}
+    ${bars(sorted,r=>total>0?(r.val||0)/total*100:0,r=>r.c,r=>total>0?f((r.val||0)/total*100,1)+'%':'—',r=>r.t)}
   </div>`:'';
   return{kpis,chart,sorted,total,eq};
 }
@@ -1142,7 +1142,7 @@ function manualPositionList(arr,sorted,saveArrFn,calcFn){
     const pnlCol=pnlPct==null?'var(--d)':pnlPct>=0?'var(--g)':'var(--r)';
     const isLive=BIST_L[r.t]!=null;
     const costInfo=r.cost?`<span style="font-size:9px;color:var(--d)">maliyet: ${ftl(r.cost)}</span>`:'';
-    const liveTag=isLive?`<span style="font-size:8px;color:var(--g);margin-left:4px">‚óè canlƒ±</span>`:'';
+    const liveTag=isLive?`<span style="font-size:8px;color:var(--g);margin-left:4px">● canlı</span>`:'';
     const sc=BIST_CH[r.t]?computeScore(r.t,BIST_CH[r.t]):SCORES[r.t]??null;
     const dcp=r.dcp,dcCol=dcp==null?'var(--d)':dcp>=0?'var(--g)':'var(--r)';
     return`<div class="panel" style="margin-bottom:6px;padding:10px 11px">
@@ -1153,13 +1153,13 @@ function manualPositionList(arr,sorted,saveArrFn,calcFn){
             <div><span style="font-weight:700;color:${r.c}">${r.t}</span>${liveTag}
               <span style="font-size:9px;color:var(--d);margin-left:6px">${r.s||''}</span></div>
             <div style="text-align:right">
-              <div>${r.val!=null?ftl(r.val):'‚Äî'}</div>
+              <div>${r.val!=null?ftl(r.val):'—'}</div>
               <div style="font-size:9px;color:${pnlCol}">${pnlPct!=null?sg(pnlPct)+f(Math.abs(pnlPct),1)+'%':''}</div>
             </div>
           </div>
           <div style="display:flex;gap:8px;margin-top:3px;align-items:center;flex-wrap:wrap">
             <span style="font-size:9px;color:var(--d)">${r.n} adet @ ${ftl(r.price||0)}</span>${costInfo}
-            ${dcp!=null?`<span style="font-size:9px;color:${dcCol}">${sg(dcp)}${f(Math.abs(dcp),2)}% bug√ºn</span>`:''}
+            ${dcp!=null?`<span style="font-size:9px;color:${dcCol}">${sg(dcp)}${f(Math.abs(dcp),2)}% bugün</span>`:''}
           </div>
         </div>
       </div>
@@ -1167,19 +1167,19 @@ function manualPositionList(arr,sorted,saveArrFn,calcFn){
   }).join('');
 }
 
-/* ‚îÄ‚îÄ BIST101: 4 model (Alfa/Beta/Katƒ±lƒ±m/Delta) + benzersiz toplam ‚îÄ‚îÄ */
+/* ── BIST101: 4 model (Alfa/Beta/Katılım/Delta) + benzersiz toplam ── */
 function tabBIST101_Portfolio(){
   const{rows,total}=calcBIST101();
-  if(!rows.length)return`<div class="empty">Hen√ºz hisse eklenmedi.<br>"Y√∂netim" sekmesinden BIST101 hisselerini ekle.</div>`;
+  if(!rows.length)return`<div class="empty">Henüz hisse eklenmedi.<br>"Yönetim" sekmesinden BIST101 hisselerini ekle.</div>`;
 
   const kpis=`<div class="kgrid">
-    <div class="kpi" style="grid-column:span 2"><div class="klbl">TOPLAM (17 BENZERSƒ∞Z Hƒ∞SSE)</div><div class="kval" style="color:#fff;font-size:18px">${ftl(total)}</div></div>
-    <div class="kpi"><div class="klbl">NAKƒ∞T</div><div class="kval" style="color:var(--a)">${ftl(BIST101_CASH)}</div></div></div>`;
+    <div class="kpi" style="grid-column:span 2"><div class="klbl">TOPLAM (17 BENZERSİZ HİSSE)</div><div class="kval" style="color:#fff;font-size:18px">${ftl(total)}</div></div>
+    <div class="kpi"><div class="klbl">NAKİT</div><div class="kval" style="color:var(--a)">${ftl(BIST101_CASH)}</div></div></div>`;
 
-  // 4 model kartƒ±
+  // 4 model kartı
   const priceOf=t=>BIST101.find(x=>x.t===t)?.price||0;
   const cards=Object.entries(BIST101_MODELS).map(([name,model])=>{
-    const modelValue=model.holdings.reduce((s,h)=>s+priceOf(h.t)*1,0); // referans ama√ßlƒ±, ger√ßek deƒüer aƒüƒ±rlƒ±ƒüa g√∂re
+    const modelValue=model.holdings.reduce((s,h)=>s+priceOf(h.t)*1,0); // referans amaçlı, gerçek değer ağırlığa göre
     const avgPnl=avg(model.holdings.map(h=>{
       const p=priceOf(h.t);return p&&h.cost?(p-h.cost)/h.cost*100:0;
     }));
@@ -1191,13 +1191,13 @@ function tabBIST101_Portfolio(){
       const sharedTag=shared.length?`<span style="font-size:8px;color:var(--d);margin-left:4px">(${shared.map(([n2])=>n2[0]).join('/')} ile ortak)</span>`:'';
       return`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;border-bottom:1px solid rgba(28,42,58,.4)">
         <span>${h.t}${sharedTag} <span style="color:var(--d);font-size:9px">%${f(h.weight,1)}</span></span>
-        <span style="color:${pnl!=null&&pnl>=0?'var(--g)':'var(--r)'}">${pnl!=null?sg(pnl)+f(Math.abs(pnl),1)+'%':'‚Äî'}</span>
+        <span style="color:${pnl!=null&&pnl>=0?'var(--g)':'var(--r)'}">${pnl!=null?sg(pnl)+f(Math.abs(pnl),1)+'%':'—'}</span>
       </div>`;
     }).join('');
     return`<div class="panel" style="margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div><span style="font-weight:700;color:${model.color};font-size:13px">${name}</span>
-          <span style="font-size:9px;color:var(--d);margin-left:6px">Rƒ∞SK ${model.risk}/10</span></div>
+          <span style="font-size:9px;color:var(--d);margin-left:6px">RİSK ${model.risk}/10</span></div>
         <span style="font-weight:700;color:${pnlCol};font-size:12px">${sg(avgPnl)}${f(Math.abs(avgPnl),1)}% ort.</span>
       </div>
       <div style="font-size:9px;color:var(--d);margin-bottom:8px">${model.desc}</div>
@@ -1209,23 +1209,23 @@ function tabBIST101_Portfolio(){
   const sorted=[...rows].sort((a,b)=>(b.val||0)-(a.val||0));
   const posList=manualPositionList(BIST101,sorted);
 
-  return kpis+`<div class="sl" style="margin-top:6px">MODEL PORTF√ñYLER (4)</div>`+cards+
-    `<div class="sl" style="margin-top:6px">T√úM POZƒ∞SYONLAR (BENZERSƒ∞Z, ${rows.length})</div>`+posList+
-    `<div style="font-size:9px;color:var(--d);margin-top:10px">Bazƒ± hisseler birden fazla modelde ortak (√∂rn. ESCOM, KOTON, EBEBK) ‚Äî toplam hesapta tek sayƒ±lƒ±r.</div>`;
+  return kpis+`<div class="sl" style="margin-top:6px">MODEL PORTFÖYLER (4)</div>`+cards+
+    `<div class="sl" style="margin-top:6px">TÜM POZİSYONLAR (BENZERSİZ, ${rows.length})</div>`+posList+
+    `<div style="font-size:9px;color:var(--d);margin-top:10px">Bazı hisseler birden fazla modelde ortak (örn. ESCOM, KOTON, EBEBK) — toplam hesapta tek sayılır.</div>`;
 }
 function tabBIST101_Manage(){
   const intro=`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">
-    Hisse ekle/sil, fiyatƒ± elle g√ºncelle (Finnhub'da BIST sembolleri yok). ƒ∞≈ücep/Midas'a bakƒ±p g√ºncel fiyatƒ± yazman yeterli.
-    Model aƒüƒ±rlƒ±klarƒ± (Alfa/Beta/Katƒ±lƒ±m/Delta) ayƒ±n 1'inde Yatƒ±rƒ±m101 sinyaliyle deƒüi≈üebilir.</div>`;
-  const cashBox=`<div class="panel" style="margin-bottom:12px"><div class="sl">NAKƒ∞T (‚Ç∫)</div>
+    Hisse ekle/sil, fiyatı elle güncelle (Finnhub'da BIST sembolleri yok). İşcep/Midas'a bakıp güncel fiyatı yazman yeterli.
+    Model ağırlıkları (Alfa/Beta/Katılım/Delta) ayın 1'inde Yatırım101 sinyaliyle değişebilir.</div>`;
+  const cashBox=`<div class="panel" style="margin-bottom:12px"><div class="sl">NAKİT (₺)</div>
     <div style="display:flex;gap:6px;align-items:center"><input class="ainput" id="bistCash" type="number" step="0.01" value="${BIST101_CASH.toFixed(2)}" style="flex:1">
     <button class="miniBtn" onclick="setBistCash()" style="border-color:var(--a);color:var(--a)">Kaydet</button></div></div>`;
-  const addBox=`<div class="panel" style="margin-bottom:14px"><div class="sl">+ YENƒ∞ Hƒ∞SSE EKLE</div>
+  const addBox=`<div class="panel" style="margin-bottom:14px"><div class="sl">+ YENİ HİSSE EKLE</div>
     <div style="display:flex;gap:6px;margin-bottom:6px">
-      <input class="ainput" id="bAddSym" type="text" placeholder="Sembol (√∂rn. ATATP)" style="flex:1;text-transform:uppercase">
+      <input class="ainput" id="bAddSym" type="text" placeholder="Sembol (örn. ATATP)" style="flex:1;text-transform:uppercase">
       <input class="ainput" id="bAddQty" type="number" step="0.01" placeholder="Adet" style="flex:1"></div>
     <div style="display:flex;gap:6px">
-      <input class="ainput" id="bAddPrice" type="number" step="0.01" placeholder="G√ºncel fiyat (‚Ç∫)" style="flex:1">
+      <input class="ainput" id="bAddPrice" type="number" step="0.01" placeholder="Güncel fiyat (₺)" style="flex:1">
       <button class="abtn" onclick="addBist()" style="flex:1">Ekle</button></div></div>`;
   const list=BIST101.map(r=>`<div class="panel" style="margin-bottom:6px;padding:10px 11px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -1233,8 +1233,8 @@ function tabBIST101_Manage(){
       <button class="miniBtn" onclick="delBist('${r.t}')" style="border-color:var(--r);color:var(--r)">Sil</button></div>
     <div style="display:flex;gap:5px;flex-wrap:wrap">
       <input class="ainput" id="bn_${r.t}" type="number" step="0.01" value="${r.n}" placeholder="Adet" style="flex:1;min-width:70px">
-      <input class="ainput" id="bp_${r.t}" type="number" step="0.01" value="${r.price||''}" placeholder="Fiyat ‚Ç∫" style="flex:1;min-width:70px">
-      <button class="miniBtn" onclick="updateBist('${r.t}')" style="border-color:var(--bl);color:var(--bl)">G√ºncelle</button>
+      <input class="ainput" id="bp_${r.t}" type="number" step="0.01" value="${r.price||''}" placeholder="Fiyat ₺" style="flex:1;min-width:70px">
+      <button class="miniBtn" onclick="updateBist('${r.t}')" style="border-color:var(--bl);color:var(--bl)">Güncelle</button>
     </div></div>`).join('');
   return intro+cashBox+addBox+(BIST101.length?`<div class="sl">MEVCUT (${BIST101.length})</div>`+list:'');
 }
@@ -1260,32 +1260,32 @@ function delBist(sym){
   BIST101=BIST101.filter(x=>x.t!==sym);saveBIST101();renderAll();
 }
 
-/* ‚îÄ‚îÄ TEMETT√ú ‚îÄ‚îÄ */
+/* ── TEMETTÜ ── */
 function tabTEMETTU_Portfolio(){
   const built=genericManualPortfolio(TEMETTU,TEMETTU_CASH,calcTEMETTU);
-  if(!built)return`<div class="empty">Hen√ºz hisse eklenmedi.<br>"Y√∂netim" sekmesinden temett√º hisselerini ekle.</div>`;
+  if(!built)return`<div class="empty">Henüz hisse eklenmedi.<br>"Yönetim" sekmesinden temettü hisselerini ekle.</div>`;
   const divInfo=TEMETTU.filter(x=>x.divYield||x.divDate).map(x=>{
     return`<div class="panel manualRow"><div style="display:flex;justify-content:space-between">
       <span style="font-weight:700;color:${x.c}">${x.t}</span>
-      <span style="font-size:10px;color:var(--a)">${x.divYield?'%'+f(x.divYield,2)+' verim':''} ${x.divDate?'¬∑ '+x.divDate:''}</span>
+      <span style="font-size:10px;color:var(--a)">${x.divYield?'%'+f(x.divYield,2)+' verim':''} ${x.divDate?'· '+x.divDate:''}</span>
     </div></div>`;
   }).join('');
   return built.kpis+built.chart+manualPositionList(TEMETTU,built.sorted)+
-    (divInfo?`<div class="sl" style="margin-top:14px">TEMETT√ú Bƒ∞LGƒ∞LERƒ∞</div>`+divInfo:'');
+    (divInfo?`<div class="sl" style="margin-top:14px">TEMETTÜ BİLGİLERİ</div>`+divInfo:'');
 }
 function tabTEMETTU_Manage(){
   const intro=`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">
-    Baƒüƒ±msƒ±z temett√º portf√∂y√ºn. Hisse ekle, fiyatƒ± elle g√ºncelle, temett√º verimi ve tarihini not et.</div>`;
-  const cashBox=`<div class="panel" style="margin-bottom:12px"><div class="sl">NAKƒ∞T (‚Ç∫)</div>
+    Bağımsız temettü portföyün. Hisse ekle, fiyatı elle güncelle, temettü verimi ve tarihini not et.</div>`;
+  const cashBox=`<div class="panel" style="margin-bottom:12px"><div class="sl">NAKİT (₺)</div>
     <div style="display:flex;gap:6px;align-items:center"><input class="ainput" id="divCash" type="number" step="0.01" value="${TEMETTU_CASH.toFixed(2)}" style="flex:1">
     <button class="miniBtn" onclick="setDivCash()" style="border-color:var(--a);color:var(--a)">Kaydet</button></div></div>`;
-  const addBox=`<div class="panel" style="margin-bottom:14px"><div class="sl">+ YENƒ∞ Hƒ∞SSE EKLE</div>
+  const addBox=`<div class="panel" style="margin-bottom:14px"><div class="sl">+ YENİ HİSSE EKLE</div>
     <div style="display:flex;gap:6px;margin-bottom:6px">
       <input class="ainput" id="dAddSym" type="text" placeholder="Sembol" style="flex:1;text-transform:uppercase">
       <input class="ainput" id="dAddQty" type="number" step="0.01" placeholder="Adet" style="flex:1"></div>
     <div style="display:flex;gap:6px;margin-bottom:6px">
-      <input class="ainput" id="dAddPrice" type="number" step="0.01" placeholder="G√ºncel fiyat" style="flex:1">
-      <input class="ainput" id="dAddYield" type="number" step="0.01" placeholder="Temett√º verimi %" style="flex:1"></div>
+      <input class="ainput" id="dAddPrice" type="number" step="0.01" placeholder="Güncel fiyat" style="flex:1">
+      <input class="ainput" id="dAddYield" type="number" step="0.01" placeholder="Temettü verimi %" style="flex:1"></div>
     <button class="abtn" onclick="addDiv()" style="width:100%">Ekle</button></div>`;
   const list=TEMETTU.map(r=>`<div class="panel" style="margin-bottom:6px;padding:10px 11px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
@@ -1295,7 +1295,7 @@ function tabTEMETTU_Manage(){
       <input class="ainput" id="dn_${r.t}" type="number" step="0.01" value="${r.n}" placeholder="Adet" style="flex:1;min-width:65px">
       <input class="ainput" id="dp_${r.t}" type="number" step="0.01" value="${r.price||''}" placeholder="Fiyat" style="flex:1;min-width:65px">
       <input class="ainput" id="dy_${r.t}" type="number" step="0.01" value="${r.divYield||''}" placeholder="Verim %" style="flex:1;min-width:65px">
-      <button class="miniBtn" onclick="updateDiv('${r.t}')" style="border-color:var(--bl);color:var(--bl)">G√ºncelle</button>
+      <button class="miniBtn" onclick="updateDiv('${r.t}')" style="border-color:var(--bl);color:var(--bl)">Güncelle</button>
     </div></div>`).join('');
   return intro+cashBox+addBox+(TEMETTU.length?`<div class="sl">MEVCUT (${TEMETTU.length})</div>`+list:'');
 }
@@ -1323,14 +1323,14 @@ function delDiv(sym){
   TEMETTU=TEMETTU.filter(x=>x.t!==sym);saveTEMETTU();renderAll();
 }
 
-/* ‚îÄ‚îÄ FONLAR ‚îÄ‚îÄ */
+/* ── FONLAR ── */
 function tabFONLAR_Portfolio(){
-  if(!FONLAR.length)return`<div class="empty">Hen√ºz fon eklenmedi.<br>"Y√∂netim" sekmesinden TEFAS fonlarƒ±nƒ± ekle.</div>`;
+  if(!FONLAR.length)return`<div class="empty">Henüz fon eklenmedi.<br>"Yönetim" sekmesinden TEFAS fonlarını ekle.</div>`;
   const total=FONLAR.reduce((s,x)=>s+(x.value||0),0);
   const sorted=[...FONLAR].sort((a,b)=>b.value-a.value);
   const kpis=`<div class="kgrid">
     <div class="kpi" style="grid-column:span 3"><div class="klbl">TOPLAM (${FONLAR.length} FON)</div><div class="kval" style="color:#fff;font-size:18px">${ftl(total)}</div></div></div>`;
-  const chart=`<div class="sl">DAƒûILIM</div><div class="panel" style="padding:12px 8px;margin-bottom:14px">
+  const chart=`<div class="sl">DAĞILIM</div><div class="panel" style="padding:12px 8px;margin-bottom:14px">
     ${bars(sorted,r=>r.value/total*100,r=>'#00b0ff',r=>f(r.value/total*100,1)+'%',r=>r.code||r.name.slice(0,5))}</div>`;
   const list=sorted.map(x=>{
     const pnlPct=x.pnlPct!=null?x.pnlPct:(x.cost&&x.price?(x.price-x.cost)/x.cost*100:null);
@@ -1350,24 +1350,24 @@ function tabFONLAR_Portfolio(){
 }
 function tabFONLAR_Manage(){
   const intro=`<div style="font-size:10px;color:var(--d);margin-bottom:12px;line-height:1.6">
-    TEFAS/ƒ∞≈ücep fonlarƒ±n. Deƒüeri, adedi ve maliyeti elle g√ºncelleyebilirsin. Farklƒ± tarihlerde alƒ±nan lotlar
-    ƒ∞≈ücep'te ayrƒ± g√∂sterilse de burada tek toplam pozisyon olarak tutuluyor (aƒüƒ±rlƒ±klƒ± ortalama maliyetle).</div>`;
-  const addBox=`<div class="panel" style="margin-bottom:14px"><div class="sl">+ YENƒ∞ FON EKLE</div>
+    TEFAS/İşcep fonların. Değeri, adedi ve maliyeti elle güncelleyebilirsin. Farklı tarihlerde alınan lotlar
+    İşcep'te ayrı gösterilse de burada tek toplam pozisyon olarak tutuluyor (ağırlıklı ortalama maliyetle).</div>`;
+  const addBox=`<div class="panel" style="margin-bottom:14px"><div class="sl">+ YENİ FON EKLE</div>
     <div style="display:flex;gap:6px;margin-bottom:6px">
-      <input class="ainput" id="fAddName" type="text" placeholder="Fon adƒ±" style="flex:1.5">
+      <input class="ainput" id="fAddName" type="text" placeholder="Fon adı" style="flex:1.5">
       <input class="ainput" id="fAddCode" type="text" placeholder="Kod" style="flex:1"></div>
     <div style="display:flex;gap:6px">
-      <input class="ainput" id="fAddVal" type="number" step="0.01" placeholder="Toplam deƒüer (‚Ç∫)" style="flex:1">
+      <input class="ainput" id="fAddVal" type="number" step="0.01" placeholder="Toplam değer (₺)" style="flex:1">
       <button class="abtn" onclick="addFon()" style="flex:1">Ekle</button></div></div>`;
-  if(!FONLAR.length)return intro+addBox+`<div style="font-size:10px;color:var(--d)">Hen√ºz fon yok.</div>`;
+  if(!FONLAR.length)return intro+addBox+`<div style="font-size:10px;color:var(--d)">Henüz fon yok.</div>`;
   const list=FONLAR.map((x,i)=>`<div class="panel manualRow">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">
       <span style="font-weight:700;color:var(--bl)">${x.code||x.name}</span>
       <button class="miniBtn" onclick="delFon(${i})" style="border-color:var(--r);color:var(--r)">Sil</button></div>
     <div style="font-size:9px;color:var(--d);margin-bottom:6px">${x.name}</div>
     <div style="display:flex;gap:5px;flex-wrap:wrap">
-      <input class="ainput" id="fv_${i}" type="number" step="0.01" value="${x.value}" placeholder="Toplam ‚Ç∫" style="flex:1;min-width:80px">
-      <input class="ainput" id="fp_${i}" type="number" step="0.000001" value="${x.price||''}" placeholder="G√ºncel birim fiyat" style="flex:1;min-width:80px">
+      <input class="ainput" id="fv_${i}" type="number" step="0.01" value="${x.value}" placeholder="Toplam ₺" style="flex:1;min-width:80px">
+      <input class="ainput" id="fp_${i}" type="number" step="0.000001" value="${x.price||''}" placeholder="Güncel birim fiyat" style="flex:1;min-width:80px">
       <button class="miniBtn" onclick="updateFon(${i})" style="border-color:var(--bl);color:var(--bl)">Kaydet</button>
     </div></div>`).join('');
   return intro+addBox+`<div class="sl">MEVCUT FONLAR (${FONLAR.length})</div>`+list;
@@ -1376,13 +1376,13 @@ function addFon(){
   const name=document.getElementById('fAddName').value.trim();
   const code=document.getElementById('fAddCode').value.trim();
   const val=parseFloat(document.getElementById('fAddVal').value);
-  if(!name||isNaN(val)||val<0){alert('Fon adƒ± ve ge√ßerli deƒüer gir');return;}
+  if(!name||isNaN(val)||val<0){alert('Fon adı ve geçerli değer gir');return;}
   FONLAR.push({name,code,value:val});saveFONLAR();renderAll();
 }
 function updateFon(i){
   const v=parseFloat(document.getElementById('fv_'+i).value);
   const p=parseFloat(document.getElementById('fp_'+i).value);
-  if(isNaN(v)||v<0){alert('Ge√ßerli deƒüer gir');return;}
+  if(isNaN(v)||v<0){alert('Geçerli değer gir');return;}
   if(FONLAR[i]){
     FONLAR[i].value=v;
     if(!isNaN(p))FONLAR[i].price=p;
@@ -1394,22 +1394,22 @@ function delFon(i){
   FONLAR.splice(i,1);saveFONLAR();renderAll();
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê PARA AKI≈ûI ‚Äî basit varlƒ±klar i√ßin fallback ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ PARA AKIŞI — basit varlıklar için fallback ═══════════ */
 function tabManualFlow(rows,calcFn){
   const{total,day}=calcFn();
   const valid=rows.filter(r=>r.dcp!=null&&r.dcp!==0);
-  if(!valid.length)return`<div class="empty">G√ºnl√ºk deƒüi≈üim verisi yok.<br>Pozisyonlara "g√ºnl√ºk %" eklersen burada g√∂r√ºn√ºr.</div>`;
+  if(!valid.length)return`<div class="empty">Günlük değişim verisi yok.<br>Pozisyonlara "günlük %" eklersen burada görünür.</div>`;
   const sorted=[...valid].sort((a,b)=>b.dcp-a.dcp);
   const sum=`<div class="kgrid">
-    <div class="kpi" style="grid-column:span 3"><div class="klbl">G√úNL√úK NET</div><div class="kval ${day>=0?'pos':'neg'}">${sg(day)}${ftl(Math.abs(day))}</div></div></div>`;
-  const chart=`<div class="sl">G√úNL√úK % DEƒûƒ∞≈ûƒ∞M</div><div class="panel" style="padding:12px 8px">
+    <div class="kpi" style="grid-column:span 3"><div class="klbl">GÜNLÜK NET</div><div class="kval ${day>=0?'pos':'neg'}">${sg(day)}${ftl(Math.abs(day))}</div></div></div>`;
+  const chart=`<div class="sl">GÜNLÜK % DEĞİŞİM</div><div class="panel" style="padding:12px 8px">
     ${bars(sorted,r=>Math.abs(r.dcp),r=>r.dcp>=0?'var(--g)':'var(--r)',r=>sg(r.dcp)+f(Math.abs(r.dcp),2)+'%',r=>r.t)}</div>`;
   return sum+chart;
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê ABD TAKVƒ∞M ‚Äî Bilan√ßo + Finnhub Ekonomik Takvim ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ ABD TAKVİM — Bilanço + Finnhub Ekonomik Takvim ═══════════ */
 function tabABD_Takvim(){
-  /* Bilan√ßo tarihleri (YF calendar) */
+  /* Bilanço tarihleri (YF calendar) */
   ABD.forEach(p=>{if(!(p.t in YF_CAL))fetchYFCal(p.t,'').then(()=>{if(term==='abd'&&tab===1)renderContent();});});
   const earnEvents=ABD.map(p=>{
     const cal=YF_CAL[p.t];if(!cal?.earningsDate)return null;
@@ -1418,54 +1418,54 @@ function tabABD_Takvim(){
   }).filter(Boolean).sort((a,b)=>a.days-b.days);
 
   const earnHtml=earnEvents.length?`
-    <div class="sl" style="margin-bottom:6px">üìä Bƒ∞LAN√áO TAKVƒ∞Mƒ∞ (sƒ±radaki)</div>
+    <div class="sl" style="margin-bottom:6px">📊 BİLANÇO TAKVİMİ (sıradaki)</div>
     ${earnEvents.slice(0,10).map(e=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border:1px solid var(--b);border-radius:3px;margin-bottom:5px;font-size:11px">
         <span style="font-weight:700;color:${e.col}">${e.sym}</span>
         <span style="color:var(--t)">${e.dateStr}</span>
         <span style="color:var(--a);font-size:10px">${e.str} sonra</span>
       </div>`).join('')}`
-    :`<div style="font-size:10px;color:var(--d);margin-bottom:12px">Bilan√ßo verisi y√ºkleniyor veya bulunamadƒ±.</div>`;
+    :`<div style="font-size:10px;color:var(--d);margin-bottom:12px">Bilanço verisi yükleniyor veya bulunamadı.</div>`;
 
   /* Finnhub ekonomik takvim */
   if(!econCalLoading&&econCal===null&&fhKey)fetchEconCal();
   let econHtml='';
   if(!fhKey){
-    econHtml=`<div style="font-size:10px;color:var(--d);margin-top:14px;padding:10px;border:1px dashed var(--b);border-radius:3px">ABD ekonomik takvimi i√ßin Portf√∂y sekmesinden Finnhub key giriniz.</div>`;
+    econHtml=`<div style="font-size:10px;color:var(--d);margin-top:14px;padding:10px;border:1px dashed var(--b);border-radius:3px">ABD ekonomik takvimi için Portföy sekmesinden Finnhub key giriniz.</div>`;
   }else if(econCalLoading||econCal===null){
-    econHtml=`<div style="color:var(--d);font-size:11px;padding:14px 0"><span class="spin">‚óà</span> Ekonomik takvim y√ºkleniyor‚Ä¶</div>`;
+    econHtml=`<div style="color:var(--d);font-size:11px;padding:14px 0"><span class="spin">◈</span> Ekonomik takvim yükleniyor…</div>`;
   }else{
     const evts=(econCal||[])
       .filter(e=>e.impact==='high'||e.impact==='medium')
       .sort((a,b)=>(a.time||0)-(b.time||0))
       .slice(0,20);
     econHtml=evts.length?`
-      <div class="sl" style="margin-top:14px;margin-bottom:6px">üåê EKONOMƒ∞K TAKVƒ∞M (3 hafta ¬∑ y√ºksek/orta etki)</div>
+      <div class="sl" style="margin-top:14px;margin-bottom:6px">🌐 EKONOMİK TAKVİM (3 hafta · yüksek/orta etki)</div>
       ${evts.map(e=>{
         const d=new Date((e.time||0)*1000);
         const dateStr=d.toLocaleDateString('tr-TR',{day:'2-digit',month:'short',weekday:'short'});
         const col=e.impact==='high'?'var(--r)':'var(--a)';
-        const actual=e.actual!=null?`<span style="color:var(--g);margin-left:4px">Ger√ßek: ${e.actual}${e.unit||''}</span>`:'';
+        const actual=e.actual!=null?`<span style="color:var(--g);margin-left:4px">Gerçek: ${e.actual}${e.unit||''}</span>`:'';
         const est=e.estimate!=null?`<span style="color:var(--d);margin-left:4px">Tahmin: ${e.estimate}${e.unit||''}</span>`:'';
         return`<div style="display:flex;gap:8px;align-items:center;padding:8px 11px;border:1px solid var(--b);border-radius:3px;margin-bottom:4px;font-size:11px">
-          <span style="color:${col};font-size:8px;font-weight:700;min-width:26px;text-align:center">${e.impact==='high'?'Y√úK':'ORT'}</span>
+          <span style="color:${col};font-size:8px;font-weight:700;min-width:26px;text-align:center">${e.impact==='high'?'YÜK':'ORT'}</span>
           <div style="flex:1">
-            <div style="font-weight:600;color:var(--t)">${e.event||'‚Äî'}</div>
+            <div style="font-weight:600;color:var(--t)">${e.event||'—'}</div>
             <div style="font-size:9px;color:var(--d)">${e.country||'US'}${actual}${est}</div>
           </div>
           <div style="text-align:right;color:var(--d);font-size:10px;white-space:nowrap">${dateStr}</div>
         </div>`;
       }).join('')}`
-    :`<div style="color:var(--d);font-size:11px;padding:12px 0">Bu 3 haftada y√ºksek/orta etkili ekonomik veri bulunamadƒ±.</div>`;
+    :`<div style="color:var(--d);font-size:11px;padding:12px 0">Bu 3 haftada yüksek/orta etkili ekonomik veri bulunamadı.</div>`;
   }
 
-  /* Manuel not alanƒ± ‚Äî h√¢l√¢ alt kƒ±sƒ±mda tutuyoruz */
+  /* Manuel not alanı — hâlâ alt kısımda tutuyoruz */
   const text=loadNote(term,'Takvim'),ts=noteTimestamp(term,'Takvim');
   const noteHtml=`<div style="margin-top:16px">
-    <div class="sl" style="margin-bottom:6px">üìù NOT (manuel)</div>
-    <textarea class="ainput" id="noteArea_${term}_Takvim" placeholder="KAP takvimi, kendi notlarƒ±n‚Ä¶" style="min-height:80px">${text}</textarea>
+    <div class="sl" style="margin-bottom:6px">📝 NOT (manuel)</div>
+    <textarea class="ainput" id="noteArea_${term}_Takvim" placeholder="KAP takvimi, kendi notların…" style="min-height:80px">${text}</textarea>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-      <span style="font-size:9px;color:var(--d)">${ts?'son g√ºncelleme: '+ts:'hen√ºz kaydedilmedi'}</span>
+      <span style="font-size:9px;color:var(--d)">${ts?'son güncelleme: '+ts:'henüz kaydedilmedi'}</span>
       <button class="abtn" onclick="saveNoteFromInput('Takvim')">Kaydet</button>
     </div>
   </div>`;
@@ -1473,7 +1473,7 @@ function tabABD_Takvim(){
   return earnHtml+econHtml+noteHtml;
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê ANA RENDER Y√ñNLENDƒ∞RME ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ ANA RENDER YÖNLENDİRME ═══════════ */
 function renderContent(){
   let html='';
   if(term==='abd'){
@@ -1502,12 +1502,12 @@ function renderContent(){
     else if(tab===1)html=tabNote('Takvim');
     else if(tab===2)html=tabNote('Haberler');
     else if(tab===3)html=tabSignals();
-    else if(tab===4)html=`<div class="empty">Fonlar i√ßin g√ºnl√ºk akƒ±≈ü takibi<br>≈üimdilik basit tutuldu ‚Äî Portf√∂y sekmesinde<br>g√ºnl√ºk deƒüi≈üimi g√∂rebilirsin.</div>`;
+    else if(tab===4)html=`<div class="empty">Fonlar için günlük akış takibi<br>şimdilik basit tutuldu — Portföy sekmesinde<br>günlük değişimi görebilirsin.</div>`;
     else if(tab===5)html=tabFONLAR_Manage();
   }
   document.getElementById('content').innerHTML=html;
 }
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê Pƒ∞YASA NABZI ‚Äî BTC, Altƒ±n, G√ºm√º≈ü, NASDAQ, S&P 500 ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ PİYASA NABZI — BTC, Altın, Gümüş, NASDAQ, S&P 500 ═══════════ */
 let pulseData={btc:null,btcChg:null,gold:null,goldChg:null,silver:null,silverChg:null,qqq:null,qqqChg:null,spy:null,spyChg:null};
 let pulseLoaded=false;
 function loadPulseCache(){
@@ -1515,12 +1515,12 @@ function loadPulseCache(){
 }
 function savePulseCache(){localStorage.setItem('pulse_cache',JSON.stringify(pulseData));}
 async function fetchPulse(){
-  // BTC ‚Äî CoinGecko, √ºcretsiz, anahtarsƒ±z
+  // BTC — CoinGecko, ücretsiz, anahtarsız
   try{
     const r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
     if(r.ok){const d=await r.json();pulseData.btc=d.bitcoin.usd;pulseData.btcChg=d.bitcoin.usd_24h_change;}
   }catch(e){}
-  // Altƒ±n & G√ºm√º≈ü ‚Äî gold-api.com, √ºcretsiz, anahtarsƒ±z
+  // Altın & Gümüş — gold-api.com, ücretsiz, anahtarsız
   try{
     const r=await fetch('https://api.gold-api.com/price/XAU');
     if(r.ok){const d=await r.json();pulseData.gold=d.price;pulseData.goldChg=d.change_percent??null;}
@@ -1529,7 +1529,7 @@ async function fetchPulse(){
     const r=await fetch('https://api.gold-api.com/price/XAG');
     if(r.ok){const d=await r.json();pulseData.silver=d.price;pulseData.silverChg=d.change_percent??null;}
   }catch(e){}
-  // NASDAQ (QQQ) & S&P 500 (SPY) ‚Äî Finnhub, sende zaten var olan key ile
+  // NASDAQ (QQQ) & S&P 500 (SPY) — Finnhub, sende zaten var olan key ile
   if(fhKey){
     try{
       const r=await fetch(`https://finnhub.io/api/v1/quote?symbol=QQQ&token=${fhKey}`);
@@ -1548,14 +1548,14 @@ function renderMarketPulse(){
   const item=(lbl,val,chg,prefix='$')=>{
     const hasChg=chg!=null&&!isNaN(chg);
     const col=hasChg?(chg>=0?'var(--g)':'var(--r)'):'var(--d)';
-    const valTxt=val!=null?prefix+f(val,val<10?4:0):'‚Äî';
+    const valTxt=val!=null?prefix+f(val,val<10?4:0):'—';
     return`<div class="pulse-item"><div class="pulse-lbl">${lbl}</div><div class="pulse-val">${valTxt}</div>
-      <div class="pulse-chg" style="color:${col}">${hasChg?sg(chg)+f(Math.abs(chg),2)+'%':(pulseLoaded?'‚Äî':'‚Ä¶')}</div></div>`;
+      <div class="pulse-chg" style="color:${col}">${hasChg?sg(chg)+f(Math.abs(chg),2)+'%':(pulseLoaded?'—':'…')}</div></div>`;
   };
   el.innerHTML=`<div class="pulse">
-    ${item('‚Çø BTC',pulseData.btc,pulseData.btcChg)}
-    ${item('‚óÜ ALTIN (oz)',pulseData.gold,pulseData.goldChg)}
-    ${item('‚óá G√úM√ú≈û (oz)',pulseData.silver,pulseData.silverChg)}
+    ${item('₿ BTC',pulseData.btc,pulseData.btcChg)}
+    ${item('◆ ALTIN (oz)',pulseData.gold,pulseData.goldChg)}
+    ${item('◇ GÜMÜŞ (oz)',pulseData.silver,pulseData.silverChg)}
     ${item('NASDAQ (QQQ)',pulseData.qqq,pulseData.qqqChg)}
     ${item('S&P 500 (SPY)',pulseData.spy,pulseData.spyChg)}
   </div>`;
@@ -1575,11 +1575,11 @@ function injectRefreshBtn(){
   if(term!=='abd'||tab!==0)return;
   const wrap=document.createElement('div');
   wrap.id='rfbtnWrap';wrap.style.textAlign='right';wrap.style.marginBottom='8px';
-  wrap.innerHTML=`<button class="rfbtn" id="rfbtn" onclick="doRefresh()">‚ü≥ G√úNCELLE</button>`;
+  wrap.innerHTML=`<button class="rfbtn" id="rfbtn" onclick="doRefresh()">⟳ GÜNCELLE</button>`;
   document.getElementById('termSwitcher').insertAdjacentElement('afterend',wrap);
 }
 
-/* ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê INIT ‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê‚ïê */
+/* ═══════════ INIT ═══════════ */
 loadPulseCache();
 renderAll();
 doRefresh();
