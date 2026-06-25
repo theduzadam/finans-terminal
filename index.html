@@ -169,8 +169,9 @@ let expanded=null;
 
 /* Yahoo Finance cache — BIST/Temettü canlı fiyat + geçmiş veri */
 let BIST_L={},BIST_CH={},YF_CAL={},SCORES={};
-let bistBusy=false,bistHistLoading=false,sigExpanded=null;
-const BIST_ATTEMPTED=new Set(); // YF'den denenmiş semboller (başarısız da olsa)
+let bistBusy=false,bistHistLoading=false,abdHistLoading=false,sigExpanded=null;
+const BIST_ATTEMPTED=new Set();
+const ABD_ATTEMPTED=new Set();
 let econCal=null,econCalLoading=false;
 
 const gp=t=>L[t]?.price??null;
@@ -200,6 +201,20 @@ async function fetchOne(sym){
 }
 async function fetchChart(sym){
   if(CH[sym])return CH[sym];
+  // Yahoo Finance (ücretsiz, anahtarsız) — birincil kaynak
+  try{
+    const r=await fetch(`${YF_CHART}${sym}?interval=1d&range=1y`,{cache:'no-cache'});
+    if(r.ok){
+      const d=await r.json();
+      const res=d.chart?.result?.[0];
+      if(res){
+        const ts=res.timestamp||[],q=res.indicators?.quote?.[0]||{};
+        const out=ts.map((t,i)=>({t,c:q.close?.[i],h:q.high?.[i],l:q.low?.[i],o:q.open?.[i]})).filter(x=>x.c!=null);
+        if(out.length>=20){CH[sym]=out;return out;}
+      }
+    }
+  }catch(e){}
+  // Finnhub fallback
   if(!fhKey)return null;
   try{
     const to=Math.floor(Date.now()/1000),from=to-60*60*24*200;
@@ -287,6 +302,20 @@ async function ensureBISTHistory(){
     await new Promise(r=>setTimeout(r,150));
   }
   bistHistLoading=false;
+}
+async function ensureABDHistory(){
+  if(abdHistLoading)return;
+  abdHistLoading=true;
+  const syms=ABD.map(p=>p.t).filter(s=>!CH[s]&&!ABD_ATTEMPTED.has(s));
+  if(!syms.length){abdHistLoading=false;renderContent();return;}
+  for(const sym of syms){
+    await fetchChart(sym);
+    ABD_ATTEMPTED.add(sym);
+    recomputeAllScores();
+    renderContent();
+    await new Promise(r=>setTimeout(r,150));
+  }
+  abdHistLoading=false;
 }
 async function fetchEconCal(){
   if(!fhKey||econCalLoading)return;
@@ -829,6 +858,7 @@ function sigToggle(sym){
       fetchYFHistory(sym).then(()=>{fetchYFCal(sym);recomputeAllScores();renderContent();});
     }
     if(term==='abd'&&!CH[sym]){
+      ABD_ATTEMPTED.delete(sym);
       fetchChart(sym).then(()=>{fetchYFCal(sym,'');recomputeAllScores();renderContent();});
     }
     if(term==='abd'&&CH[sym]&&!(sym in YF_CAL)){fetchYFCal(sym,'').then(()=>renderContent());}
@@ -844,7 +874,8 @@ function tabSignals(){
   let rows,getHist,isBist=false;
   if(term==='abd'){
     rows=calcABD().rows;getHist=s=>CH[s];
-    /* Otomatik calendar fetch */
+    const needABD=rows.some(r=>!CH[r.t]&&!ABD_ATTEMPTED.has(r.t));
+    if(needABD&&!abdHistLoading)setTimeout(()=>ensureABDHistory(),0);
     rows.forEach(r=>{if(!(r.t in YF_CAL))fetchYFCal(r.t,'').then(()=>renderContent());});
   }else{
     rows=(term==='temettu'?calcTEMETTU():calcBIST101()).rows;
@@ -862,13 +893,13 @@ function tabSignals(){
     const a=data?analyzeData(r.t,price,data):null;
     return renderSignalCard(r,a,YF_CAL[r.t]??null);
   }).join('');
-  const allAttempted=isBist&&sorted.every(r=>BIST_ATTEMPTED.has(r.t));
-  const anyLoading=isBist&&sorted.some(r=>!BIST_CH[r.t]&&!BIST_ATTEMPTED.has(r.t));
-  const yfFailed=isBist&&allAttempted&&sorted.every(r=>!BIST_CH[r.t]);
-  const hint=anyLoading||bistHistLoading
+  const allAttempted=isBist?sorted.every(r=>BIST_ATTEMPTED.has(r.t)):sorted.every(r=>ABD_ATTEMPTED.has(r.t));
+  const anyLoading=isBist?sorted.some(r=>!BIST_CH[r.t]&&!BIST_ATTEMPTED.has(r.t)):sorted.some(r=>!CH[r.t]&&!ABD_ATTEMPTED.has(r.t));
+  const yfFailed=allAttempted&&(isBist?sorted.every(r=>!BIST_CH[r.t]):sorted.every(r=>!CH[r.t]));
+  const hint=anyLoading||(isBist?bistHistLoading:abdHistLoading)
     ?`<div style="font-size:9px;color:var(--d);padding:8px 0"><span class="spin">◈</span> Geçmiş fiyat verisi yükleniyor (Yahoo Finance)…</div>`
     :yfFailed
-    ?`<div style="font-size:9px;color:var(--a);padding:8px 0;border:1px solid rgba(255,179,0,.2);border-radius:3px;padding:8px 11px;margin-bottom:8px">⚠ Yahoo Finance bağlanamadı — teknik skor hesaplanamadı. Hisse detayına tıklayınca tekrar denenir.</div>`
+    ?`<div style="font-size:9px;color:var(--a);border:1px solid rgba(255,179,0,.2);border-radius:3px;padding:8px 11px;margin-bottom:8px">⚠ Yahoo Finance bağlanamadı — teknik skor hesaplanamadı.</div>`
     :'';
   return`<div style="font-size:9px;color:var(--d);margin-bottom:10px;line-height:1.6">
     Skor 0-100: <span style="color:var(--g)">70+ AL</span> · <span style="color:#8bc34a">55-70 İZLE</span> · <span style="color:var(--d)">45-55 NÖTR</span> · <span style="color:var(--a)">30-45 ZAYIF</span> · <span style="color:var(--r)">0-30 SAT</span> · Yatırım tavsiyesi değildir.</div>
